@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using TaskManagementAPI.Dtos;
 using TaskManagementAPI.Services;
@@ -61,6 +62,18 @@ public class GlobalExceptionHandler : IExceptionHandler
             UserNotFoundException => (
                 StatusCodes.Status400BadRequest,
                 exception.Message,
+                LogLevel.Information),
+
+            TaskConcurrencyException => (
+                StatusCodes.Status409Conflict,
+                exception.Message,
+                LogLevel.Information),
+
+            // A raw DbUpdateConcurrencyException shouldn't normally escape TaskService (it
+            // catches and rethrows as TaskConcurrencyException above), but this is a safety net.
+            DbUpdateConcurrencyException => (
+                StatusCodes.Status409Conflict,
+                "This record was changed by someone else since you loaded it. Please refresh and try again.",
                 LogLevel.Information),
 
             JwtConfigurationException => (

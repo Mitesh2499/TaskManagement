@@ -62,9 +62,9 @@ public class TasksController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> DeleteTask(int id)
+    public async Task<IActionResult> DeleteTask(int id, [FromQuery] string? rowVersion)
     {
-        var deleted = await _taskService.SoftDeleteTaskAsync(id);
+        var deleted = await _taskService.SoftDeleteTaskAsync(id, rowVersion);
         return deleted
             ? NoContent()
             : this.ApiError(StatusCodes.Status404NotFound, $"Task with id {id} was not found.");

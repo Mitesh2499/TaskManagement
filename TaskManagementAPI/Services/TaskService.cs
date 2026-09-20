@@ -124,12 +124,21 @@ public class TaskService : ITaskService
         task.Status = Enum.Parse<TaskState>(request.Status, ignoreCase: true);
         task.Priority = Enum.Parse<TaskPriority>(request.Priority, ignoreCase: true);
 
-        await _db.SaveChangesAsync();
+        ApplyRowVersionCheck(task, request.RowVersion);
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new TaskConcurrencyException(id);
+        }
 
         return MapToDto(task);
     }
 
-    public async Task<bool> SoftDeleteTaskAsync(int id)
+    public async Task<bool> SoftDeleteTaskAsync(int id, string? rowVersion)
     {
         var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == id);
         if (task is null)
@@ -138,9 +147,43 @@ public class TaskService : ITaskService
         }
 
         task.IsDeleted = true;
-        await _db.SaveChangesAsync();
+
+        if (!string.IsNullOrWhiteSpace(rowVersion))
+        {
+            ApplyRowVersionCheck(task, rowVersion);
+        }
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new TaskConcurrencyException(id);
+        }
 
         return true;
+    }
+
+    /// <summary>
+    /// Tells EF Core "the version I last saw was this one" so the UPDATE statement's WHERE
+    /// clause includes the original RowVersion. If another request already changed the row in
+    /// between, zero rows match and EF throws DbUpdateConcurrencyException — a lost update
+    /// caught instead of silently applied.
+    /// </summary>
+    private void ApplyRowVersionCheck(TaskItem task, string clientRowVersion)
+    {
+        byte[] originalRowVersion;
+        try
+        {
+            originalRowVersion = Convert.FromBase64String(clientRowVersion);
+        }
+        catch (FormatException)
+        {
+            throw new ArgumentException("RowVersion is not a valid value.");
+        }
+
+        _db.Entry(task).Property(t => t.RowVersion).OriginalValue = originalRowVersion;
     }
 
     public async Task<IEnumerable<TaskSummaryDto>> GetSummaryAsync()
@@ -174,7 +217,8 @@ public class TaskService : ITaskService
         AssignedToUserId = task.AssignedToUserId,
         AssignedToName = task.AssignedToUser.Name,
         CreatedDate = task.CreatedDate,
-        ModifiedDate = task.ModifiedDate
+        ModifiedDate = task.ModifiedDate,
+        RowVersion = Convert.ToBase64String(task.RowVersion),
     };
 
     private class TaskSummaryRow

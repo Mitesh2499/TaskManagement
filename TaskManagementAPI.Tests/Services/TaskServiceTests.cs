@@ -50,6 +50,9 @@ public class TaskServiceTests
             IsDeleted = isDeleted,
             CreatedDate = DateTime.UtcNow,
             ModifiedDate = modifiedDate ?? DateTime.UtcNow,
+            // The EF Core InMemory provider (unlike real SQL Server) doesn't auto-generate
+            // IsRowVersion() values, so seed a real placeholder rather than leaving it empty.
+            RowVersion = new byte[] { 0, 0, 0, 0, 0, 0, 0, 1 },
         };
         _db.Tasks.Add(task);
         _db.SaveChanges();
@@ -246,6 +249,7 @@ public class TaskServiceTests
             Status = "Done",
             Priority = "Critical",
             AssignedToUserId = _bob.Id,
+            RowVersion = Convert.ToBase64String(task.RowVersion),
         };
 
         var result = await _sut.UpdateTaskAsync(task.Id, request);
@@ -297,7 +301,7 @@ public class TaskServiceTests
     {
         var task = AddTask("To be deleted", TaskState.ToDo, TaskPriority.Low);
 
-        var deleted = await _sut.SoftDeleteTaskAsync(task.Id);
+        var deleted = await _sut.SoftDeleteTaskAsync(task.Id, rowVersion: null);
 
         deleted.Should().BeTrue();
         (await _sut.GetTaskByIdAsync(task.Id)).Should().BeNull();
@@ -310,8 +314,87 @@ public class TaskServiceTests
     [Fact]
     public async Task SoftDeleteTaskAsync_UnknownId_ReturnsFalse()
     {
-        var deleted = await _sut.SoftDeleteTaskAsync(9999);
+        var deleted = await _sut.SoftDeleteTaskAsync(9999, rowVersion: null);
 
         deleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateTaskAsync_CurrentRowVersion_Succeeds()
+    {
+        var created = await _sut.CreateTaskAsync(new CreateTaskRequest
+        {
+            Title = "Task",
+            Status = "ToDo",
+            Priority = "Low",
+            AssignedToUserId = _alice.Id,
+        });
+
+        var result = await _sut.UpdateTaskAsync(created.Id, new UpdateTaskRequest
+        {
+            Title = "Updated",
+            Status = "Done",
+            Priority = "Low",
+            AssignedToUserId = _alice.Id,
+            RowVersion = created.RowVersion,
+        });
+
+        result.Should().NotBeNull();
+        result!.Title.Should().Be("Updated");
+    }
+
+    /// <summary>
+    /// On the real SQL Server provider, RowVersion is auto-bumped by the database on every
+    /// UPDATE. The EF Core InMemory provider used in these tests doesn't emulate that, so this
+    /// directly mutates the stored RowVersion to fake "another process already changed the row
+    /// since you loaded it" — exactly the situation the concurrency check exists to catch.
+    private async Task SimulateConcurrentChangeAsync(int taskId)
+    {
+        var tracked = await _db.Tasks.FirstAsync(t => t.Id == taskId);
+        tracked.RowVersion = Guid.NewGuid().ToByteArray();
+        await _db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task UpdateTaskAsync_StaleRowVersion_ThrowsTaskConcurrencyException()
+    {
+        // Simulates two people editing the same task: both load it (capturing the same
+        // RowVersion), someone else's change lands first, then this stale save must be
+        // rejected instead of silently overwriting that change.
+        var task = AddTask("Task", TaskState.ToDo, TaskPriority.Low, _alice);
+        var staleRowVersion = Convert.ToBase64String(task.RowVersion);
+
+        await SimulateConcurrentChangeAsync(task.Id);
+
+        var act = () => _sut.UpdateTaskAsync(task.Id, new UpdateTaskRequest
+        {
+            Title = "Stale editor's change",
+            Status = "Done",
+            Priority = "Low",
+            AssignedToUserId = _alice.Id,
+            RowVersion = staleRowVersion,
+        });
+
+        // The rejected save must not silently overwrite the concurrent change — verified via
+        // the exception type. (Re-reading the title through this same DbContext instance isn't
+        // a reliable check here: EF's identity map returns the tracked entity's in-memory
+        // property values, which the failed save already mutated locally even though nothing
+        // was persisted. A fresh DbContext — as every real HTTP request gets — would see the
+        // untouched, persisted title correctly.)
+        await act.Should().ThrowAsync<TaskConcurrencyException>();
+    }
+
+    [Fact]
+    public async Task SoftDeleteTaskAsync_StaleRowVersion_ThrowsTaskConcurrencyException()
+    {
+        var task = AddTask("Task", TaskState.ToDo, TaskPriority.Low, _alice);
+        var staleRowVersion = Convert.ToBase64String(task.RowVersion);
+
+        await SimulateConcurrentChangeAsync(task.Id);
+
+        var act = () => _sut.SoftDeleteTaskAsync(task.Id, staleRowVersion);
+
+        await act.Should().ThrowAsync<TaskConcurrencyException>();
+        (await _sut.GetTaskByIdAsync(task.Id)).Should().NotBeNull();
     }
 }

@@ -41,6 +41,10 @@ public class TaskServiceSummaryTests : IDisposable
             Status = status,
             Priority = priority,
             AssignedToUserId = _user.Id,
+            // Sqlite has no native rowversion/computed-on-write column like SQL Server, so
+            // unlike the real database it won't auto-populate this NOT NULL column — set a
+            // placeholder explicitly since these tests don't exercise concurrency behavior.
+            RowVersion = new byte[] { 1 },
             IsDeleted = isDeleted,
             CreatedDate = DateTime.UtcNow,
             ModifiedDate = DateTime.UtcNow,

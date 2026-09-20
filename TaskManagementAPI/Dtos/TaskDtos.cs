@@ -15,6 +15,10 @@ public class TaskDto
     public string AssignedToName { get; set; } = string.Empty;
     public DateTime CreatedDate { get; set; }
     public DateTime ModifiedDate { get; set; }
+
+    // Base64-encoded RowVersion — the client sends this back unchanged on update/delete so the
+    // server can detect "someone else already changed this task since you loaded it".
+    public string RowVersion { get; set; } = string.Empty;
 }
 
 public class CreateTaskRequest
@@ -59,6 +63,9 @@ public class UpdateTaskRequest
     [Required(ErrorMessage = "AssignedToUserId is required.")]
     [Range(1, int.MaxValue, ErrorMessage = "AssignedToUserId must reference a valid user.")]
     public int AssignedToUserId { get; set; }
+
+    [Required(ErrorMessage = "RowVersion is required.")]
+    public string RowVersion { get; set; } = string.Empty;
 }
 
 public class TaskQueryFilter

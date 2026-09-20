@@ -10,6 +10,14 @@ public class UserNotFoundException : Exception
     }
 }
 
+public class TaskConcurrencyException : Exception
+{
+    public TaskConcurrencyException(int taskId)
+        : base($"Task {taskId} was changed by someone else since you loaded it. Please refresh and try again.")
+    {
+    }
+}
+
 public interface ITaskService
 {
     Task<PagedResult<TaskDto>> GetTasksAsync(
@@ -22,6 +30,6 @@ public interface ITaskService
     Task<TaskDto?> GetTaskByIdAsync(int id);
     Task<TaskDto> CreateTaskAsync(CreateTaskRequest request);
     Task<TaskDto?> UpdateTaskAsync(int id, UpdateTaskRequest request);
-    Task<bool> SoftDeleteTaskAsync(int id);
+    Task<bool> SoftDeleteTaskAsync(int id, string? rowVersion);
     Task<IEnumerable<TaskSummaryDto>> GetSummaryAsync();
 }

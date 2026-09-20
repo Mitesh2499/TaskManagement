@@ -38,9 +38,12 @@ public static class TestDb
             .UseSqlite(connection)
             .Options;
 
-        var db = new AppDbContext(options);
+        // Skip HasData seeding entirely here: SeedData's TaskItem rows don't (and can't) set
+        // RowVersion — SQL Server's real rowversion column rejects explicit inserts into it —
+        // and Sqlite has no equivalent auto-generation, so applying that seed data against
+        // Sqlite fails a NOT NULL check during table creation. These tests don't need it anyway.
+        var db = new AppDbContext(options, applySeedData: false);
         db.Database.EnsureCreated();
-        ClearSeedData(db);
         return (db, connection);
     }
 
