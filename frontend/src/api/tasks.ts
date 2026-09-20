@@ -30,6 +30,6 @@ export async function updateTask(id: number, values: TaskFormValues): Promise<Ta
   return data;
 }
 
-export async function deleteTask(id: number): Promise<void> {
-  await apiClient.delete(`/api/tasks/${id}`);
+export async function deleteTask(id: number, rowVersion?: string): Promise<void> {
+  await apiClient.delete(`/api/tasks/${id}`, { params: rowVersion ? { rowVersion } : undefined });
 }

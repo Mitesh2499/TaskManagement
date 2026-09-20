@@ -64,9 +64,9 @@ export function useTasks(filter: TaskFilter) {
     return updated;
   }
 
-  async function removeTask(id: number) {
+  async function removeTask(id: number, rowVersion?: string) {
     try {
-      await tasksApi.deleteTask(id);
+      await tasksApi.deleteTask(id, rowVersion);
     } catch (err) {
       // A 404 here means the task is already gone server-side (e.g. a duplicate
       // click fired two deletes, or it was removed elsewhere). The end state the

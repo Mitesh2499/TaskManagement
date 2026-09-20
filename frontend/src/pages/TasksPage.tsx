@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { isAxiosError } from "axios";
 import { TriangleAlertIcon } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, type TabId } from "@/components/PageHeader";
@@ -63,8 +64,21 @@ export function TasksPage() {
     [statusFilter, priorityFilter, assigneeFilter, debouncedSearch, page, activeTab],
   );
 
-  const { tasks, totalCount, totalPages, isLoading, isFetching, error, createTask, updateTask, removeTask } =
+  const { tasks, totalCount, totalPages, isLoading, isFetching, error, createTask, updateTask, removeTask, refetch } =
     useTasks(filter);
+
+  // A 409 means someone else changed/deleted the task since it was loaded — refresh so the
+  // user sees the current state instead of continuing to act on stale data.
+  function handleConflict(err: unknown, action: string) {
+    if (isAxiosError(err) && err.response?.status === 409) {
+      toast.error("Couldn't " + action, {
+        description: "This task was changed by someone else. The list has been refreshed.",
+      });
+      refetch();
+      return true;
+    }
+    return false;
+  }
 
   const sortedTasks = useMemo(() => sortTasks(tasks, sortKey, sortDirection), [tasks, sortKey, sortDirection]);
 
@@ -125,7 +139,9 @@ export function TasksPage() {
       await updateTask(editingTask.id, values);
       toast.success("Task updated", { description: values.title });
     } catch (err) {
-      toast.error("Couldn't update task", { description: getApiErrorMessage(err) });
+      if (!handleConflict(err, "update task")) {
+        toast.error("Couldn't update task", { description: getApiErrorMessage(err) });
+      }
       throw err;
     }
   }
@@ -138,10 +154,13 @@ export function TasksPage() {
         status,
         priority: task.priority,
         assignedToUserId: task.assignedToUserId,
+        rowVersion: task.rowVersion,
       });
       toast.success(`Marked as ${STATUS_LABELS[status]}`, { description: task.title });
     } catch (err) {
-      toast.error("Couldn't update status", { description: getApiErrorMessage(err) });
+      if (!handleConflict(err, "update status")) {
+        toast.error("Couldn't update status", { description: getApiErrorMessage(err) });
+      }
     }
   }
 
@@ -152,11 +171,13 @@ export function TasksPage() {
     isDeletingRef.current = true;
     setIsDeleting(true);
     try {
-      await removeTask(taskPendingDelete.id);
+      await removeTask(taskPendingDelete.id, taskPendingDelete.rowVersion);
       toast.success("Task deleted", { description: taskPendingDelete.title });
       setTaskPendingDelete(null);
     } catch (err) {
-      toast.error("Couldn't delete task", { description: getApiErrorMessage(err) });
+      if (!handleConflict(err, "delete task")) {
+        toast.error("Couldn't delete task", { description: getApiErrorMessage(err) });
+      }
     } finally {
       isDeletingRef.current = false;
       setIsDeleting(false);

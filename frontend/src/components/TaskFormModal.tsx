@@ -48,6 +48,7 @@ export function TaskFormModal({ task, open, onOpenChange, onSubmit }: TaskFormMo
         status: task.status,
         priority: task.priority,
         assignedToUserId: task.assignedToUserId,
+        rowVersion: task.rowVersion,
       });
     } else {
       setValues(emptyValues(users[0]?.id ?? 0));

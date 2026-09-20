@@ -12,6 +12,9 @@ export interface Task {
   assignedToName: string;
   createdDate: string;
   modifiedDate: string;
+  // Base64-encoded concurrency token — send back unchanged on update/delete so the server can
+  // detect "someone else already changed this task since you loaded it".
+  rowVersion: string;
 }
 
 export interface TaskFormValues {
@@ -20,6 +23,8 @@ export interface TaskFormValues {
   status: TaskStatus;
   priority: TaskPriority;
   assignedToUserId: number;
+  // Only present when editing an existing task; the create endpoint doesn't need it.
+  rowVersion?: string;
 }
 
 export interface TaskFilter {
