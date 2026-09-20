@@ -23,13 +23,16 @@ public class AppDbContext : DbContext
 
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<TaskAuditLog> TaskAuditLogs => Set<TaskAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<TaskItem>(entity =>
         {
             entity.Property(t => t.Title).IsRequired().HasMaxLength(200);
-            entity.Property(t => t.Description).HasMaxLength(2000);
+            // Description holds rich-text HTML from the frontend editor, so it needs far more
+            // headroom than a plain-text field of similar visual length would.
+            entity.Property(t => t.Description).HasMaxLength(10000);
             entity.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
             entity.Property(t => t.Priority).HasConversion<string>().HasMaxLength(20);
             entity.HasQueryFilter(t => !t.IsDeleted);
@@ -64,6 +67,19 @@ public class AppDbContext : DbContext
             entity.Property(u => u.Email).IsRequired().HasMaxLength(256);
             entity.Property(u => u.PasswordHash).IsRequired();
             entity.HasIndex(u => u.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<TaskAuditLog>(entity =>
+        {
+            entity.Property(a => a.TaskTitle).IsRequired().HasMaxLength(200);
+            entity.Property(a => a.Action).HasConversion<string>().HasMaxLength(20);
+            entity.Property(a => a.Summary).IsRequired().HasMaxLength(1000);
+            entity.HasIndex(a => a.TaskId);
+
+            entity.HasOne(a => a.ChangedByUser)
+                .WithMany()
+                .HasForeignKey(a => a.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         if (_applySeedData)

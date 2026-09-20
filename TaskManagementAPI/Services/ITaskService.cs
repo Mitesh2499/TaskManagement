@@ -28,8 +28,9 @@ public interface ITaskService
         int page,
         int pageSize);
     Task<TaskDto?> GetTaskByIdAsync(int id);
-    Task<TaskDto> CreateTaskAsync(CreateTaskRequest request);
-    Task<TaskDto?> UpdateTaskAsync(int id, UpdateTaskRequest request);
-    Task<bool> SoftDeleteTaskAsync(int id, string? rowVersion);
+    Task<TaskDto> CreateTaskAsync(CreateTaskRequest request, int actingUserId);
+    Task<TaskDto?> UpdateTaskAsync(int id, UpdateTaskRequest request, int actingUserId);
+    Task<bool> SoftDeleteTaskAsync(int id, string? rowVersion, int actingUserId);
     Task<IEnumerable<TaskSummaryDto>> GetSummaryAsync();
+    Task<PagedResult<TaskAuditLogDto>> GetChangeLogAsync(int? taskId, int page, int pageSize);
 }

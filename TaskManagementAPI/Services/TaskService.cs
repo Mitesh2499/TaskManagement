@@ -82,7 +82,7 @@ public class TaskService : ITaskService
         return task is null ? null : MapToDto(task);
     }
 
-    public async Task<TaskDto> CreateTaskAsync(CreateTaskRequest request)
+    public async Task<TaskDto> CreateTaskAsync(CreateTaskRequest request, int actingUserId)
     {
         var assignedToUser = await _db.Users.FindAsync(request.AssignedToUserId)
             ?? throw new UserNotFoundException(request.AssignedToUserId);
@@ -98,18 +98,35 @@ public class TaskService : ITaskService
         };
 
         _db.Tasks.Add(task);
+        await _db.SaveChangesAsync(); // assigns task.Id, needed for the audit log's FK below
+
+        _db.TaskAuditLogs.Add(new TaskAuditLog
+        {
+            TaskId = task.Id,
+            TaskTitle = task.Title,
+            ChangedByUserId = actingUserId,
+            Action = TaskAuditAction.Created,
+            Summary = $"Created task, assigned to {assignedToUser.Name}",
+            Timestamp = DateTime.UtcNow,
+        });
         await _db.SaveChangesAsync();
 
         return MapToDto(task);
     }
 
-    public async Task<TaskDto?> UpdateTaskAsync(int id, UpdateTaskRequest request)
+    public async Task<TaskDto?> UpdateTaskAsync(int id, UpdateTaskRequest request, int actingUserId)
     {
         var task = await _db.Tasks.Include(t => t.AssignedToUser).FirstOrDefaultAsync(t => t.Id == id);
         if (task is null)
         {
             return null;
         }
+
+        var oldTitle = task.Title;
+        var oldDescription = task.Description;
+        var oldStatus = task.Status;
+        var oldPriority = task.Priority;
+        var oldAssignedToName = task.AssignedToUser.Name;
 
         if (task.AssignedToUserId != request.AssignedToUserId)
         {
@@ -126,6 +143,20 @@ public class TaskService : ITaskService
 
         ApplyRowVersionCheck(task, request.RowVersion);
 
+        var summary = BuildUpdateSummary(oldTitle, task.Title, oldDescription, task.Description, oldStatus, task.Status, oldPriority, task.Priority, oldAssignedToName, task.AssignedToUser.Name);
+        if (summary is not null)
+        {
+            _db.TaskAuditLogs.Add(new TaskAuditLog
+            {
+                TaskId = task.Id,
+                TaskTitle = task.Title,
+                ChangedByUserId = actingUserId,
+                Action = TaskAuditAction.Updated,
+                Summary = summary,
+                Timestamp = DateTime.UtcNow,
+            });
+        }
+
         try
         {
             await _db.SaveChangesAsync();
@@ -138,7 +169,7 @@ public class TaskService : ITaskService
         return MapToDto(task);
     }
 
-    public async Task<bool> SoftDeleteTaskAsync(int id, string? rowVersion)
+    public async Task<bool> SoftDeleteTaskAsync(int id, string? rowVersion, int actingUserId)
     {
         var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == id);
         if (task is null)
@@ -153,6 +184,16 @@ public class TaskService : ITaskService
             ApplyRowVersionCheck(task, rowVersion);
         }
 
+        _db.TaskAuditLogs.Add(new TaskAuditLog
+        {
+            TaskId = task.Id,
+            TaskTitle = task.Title,
+            ChangedByUserId = actingUserId,
+            Action = TaskAuditAction.Deleted,
+            Summary = "Deleted task",
+            Timestamp = DateTime.UtcNow,
+        });
+
         try
         {
             await _db.SaveChangesAsync();
@@ -163,6 +204,47 @@ public class TaskService : ITaskService
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Builds a human-readable diff of what changed, or null if nothing did (e.g. a save
+    /// that resubmitted identical values) — callers skip writing an audit entry in that case.
+    /// </summary>
+    private static string? BuildUpdateSummary(
+        string oldTitle, string newTitle,
+        string? oldDescription, string? newDescription,
+        TaskState oldStatus, TaskState newStatus,
+        TaskPriority oldPriority, TaskPriority newPriority,
+        string oldAssignedToName, string newAssignedToName)
+    {
+        var changes = new List<string>();
+
+        if (oldTitle != newTitle)
+        {
+            changes.Add($"Title: \"{oldTitle}\" → \"{newTitle}\"");
+        }
+
+        if (oldStatus != newStatus)
+        {
+            changes.Add($"Status: {oldStatus} → {newStatus}");
+        }
+
+        if (oldPriority != newPriority)
+        {
+            changes.Add($"Priority: {oldPriority} → {newPriority}");
+        }
+
+        if (oldAssignedToName != newAssignedToName)
+        {
+            changes.Add($"Assigned to: {oldAssignedToName} → {newAssignedToName}");
+        }
+
+        if (oldDescription != newDescription)
+        {
+            changes.Add("Description updated");
+        }
+
+        return changes.Count > 0 ? string.Join("; ", changes) : null;
     }
 
     /// <summary>
@@ -205,6 +287,42 @@ public class TaskService : ITaskService
             Priority = Enum.Parse<TaskPriority>(r.Priority),
             Count = r.Count
         });
+    }
+
+    public async Task<PagedResult<TaskAuditLogDto>> GetChangeLogAsync(int? taskId, int page, int pageSize)
+    {
+        var query = _db.TaskAuditLogs.Include(a => a.ChangedByUser).AsQueryable();
+
+        if (taskId is not null)
+        {
+            query = query.Where(a => a.TaskId == taskId);
+        }
+
+        query = query.OrderByDescending(a => a.Timestamp).ThenByDescending(a => a.Id);
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PagedResult<TaskAuditLogDto>
+        {
+            Items = items.Select(a => new TaskAuditLogDto
+            {
+                Id = a.Id,
+                TaskId = a.TaskId,
+                TaskTitle = a.TaskTitle,
+                ChangedByName = a.ChangedByUser.Name,
+                Action = a.Action.ToString(),
+                Summary = a.Summary,
+                Timestamp = a.Timestamp,
+            }).ToList(),
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+        };
     }
 
     private static TaskDto MapToDto(TaskItem task) => new()

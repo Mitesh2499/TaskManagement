@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskManagementAPI.Dtos;
@@ -18,6 +19,10 @@ public class TasksController : ControllerBase
         _taskService = taskService;
     }
 
+    // [Authorize] guarantees a valid token, and the "sub" claim (mapped to NameIdentifier) is
+    // always set by TokenService when the token is issued.
+    private int CurrentUserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
     [HttpGet]
     public async Task<ActionResult<PagedResult<TaskDto>>> GetTasks([FromQuery] TaskQueryFilter filter)
     {
@@ -36,6 +41,21 @@ public class TasksController : ControllerBase
         return Ok(summary);
     }
 
+    // Mapped before {id} for the same reason as "summary" above.
+    [HttpGet("changelog")]
+    public async Task<ActionResult<PagedResult<TaskAuditLogDto>>> GetChangeLog([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        var result = await _taskService.GetChangeLogAsync(taskId: null, page, pageSize);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:int}/changelog")]
+    public async Task<ActionResult<PagedResult<TaskAuditLogDto>>> GetTaskChangeLog(int id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        var result = await _taskService.GetChangeLogAsync(id, page, pageSize);
+        return Ok(result);
+    }
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<TaskDto>> GetTaskById(int id)
     {
@@ -48,14 +68,14 @@ public class TasksController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TaskDto>> CreateTask(CreateTaskRequest request)
     {
-        var task = await _taskService.CreateTaskAsync(request);
+        var task = await _taskService.CreateTaskAsync(request, CurrentUserId);
         return CreatedAtAction(nameof(GetTaskById), new { id = task.Id }, task);
     }
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult<TaskDto>> UpdateTask(int id, UpdateTaskRequest request)
     {
-        var task = await _taskService.UpdateTaskAsync(id, request);
+        var task = await _taskService.UpdateTaskAsync(id, request, CurrentUserId);
         return task is null
             ? this.ApiError(StatusCodes.Status404NotFound, $"Task with id {id} was not found.")
             : Ok(task);
@@ -64,7 +84,7 @@ public class TasksController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteTask(int id, [FromQuery] string? rowVersion)
     {
-        var deleted = await _taskService.SoftDeleteTaskAsync(id, rowVersion);
+        var deleted = await _taskService.SoftDeleteTaskAsync(id, rowVersion, CurrentUserId);
         return deleted
             ? NoContent()
             : this.ApiError(StatusCodes.Status404NotFound, $"Task with id {id} was not found.");

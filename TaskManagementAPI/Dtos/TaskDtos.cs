@@ -27,7 +27,7 @@ public class CreateTaskRequest
     [MaxLength(200, ErrorMessage = "Title must be at most 200 characters.")]
     public string Title { get; set; } = string.Empty;
 
-    [MaxLength(2000, ErrorMessage = "Description must be at most 2000 characters.")]
+    [MaxLength(10000, ErrorMessage = "Description must be at most 10000 characters.")]
     public string? Description { get; set; }
 
     [Required(ErrorMessage = "Status is required. Allowed values are: ToDo, InProgress, Done.")]
@@ -49,7 +49,7 @@ public class UpdateTaskRequest
     [MaxLength(200, ErrorMessage = "Title must be at most 200 characters.")]
     public string Title { get; set; } = string.Empty;
 
-    [MaxLength(2000, ErrorMessage = "Description must be at most 2000 characters.")]
+    [MaxLength(10000, ErrorMessage = "Description must be at most 10000 characters.")]
     public string? Description { get; set; }
 
     [Required(ErrorMessage = "Status is required. Allowed values are: ToDo, InProgress, Done.")]
