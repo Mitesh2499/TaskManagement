@@ -1,4 +1,5 @@
 import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { TaskCard } from "@/components/TaskCard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -35,13 +36,15 @@ export function BoardColumn({ status, tasks, onEdit, onDelete }: BoardColumnProp
           isOver && "bg-muted outline-primary/40",
         )}
       >
-        {tasks.length === 0 ? (
-          <p className="px-2 py-6 text-center text-xs text-muted-foreground">No tasks</p>
-        ) : (
-          tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
-          ))
-        )}
+        <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+          {tasks.length === 0 ? (
+            <p className="px-2 py-6 text-center text-xs text-muted-foreground">No tasks</p>
+          ) : (
+            tasks.map((task) => (
+              <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
+            ))
+          )}
+        </SortableContext>
       </div>
     </div>
   );
