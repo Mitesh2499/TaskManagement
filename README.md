@@ -4,6 +4,30 @@ A full-stack task management system for an internal team: a .NET 8 Web API backe
 
 See [PLAN.md](PLAN.md) for the original design plan and requirement-to-implementation mapping, and [TESTING.md](TESTING.md) for the backend unit test suite and coverage report.
 
+## Quick start
+
+Prerequisites: [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), a reachable SQL Server instance, [Node.js 20+](https://nodejs.org/). See [Prerequisites](#prerequisites) below for details/alternatives (LocalDB, Docker, etc.).
+
+```bash
+# 1. Backend — apply migrations (creates + seeds the database) and run the API
+cd TaskManagementAPI
+dotnet tool restore
+dotnet tool run dotnet-ef database update
+dotnet run
+# API now listening on http://localhost:5263 (see section 1 below to configure the DB connection first)
+
+# 2. Frontend — in a second terminal
+cd frontend
+npm install
+cp .env.example .env   # set VITE_API_URL if the API isn't on http://localhost:5263
+npm run dev
+# Open the printed URL, e.g. http://localhost:5173
+```
+
+Log in with the seeded demo account: **`demo@example.com`** / **`Password123!`** (or sign up a new one).
+
+The rest of this document covers configuration, the full API reference, project structure, and troubleshooting.
+
 ## Features
 
 - **Auth** — email/password register & login, JWT bearer tokens, BCrypt password hashing.
