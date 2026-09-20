@@ -6,8 +6,19 @@ using TaskManagementAPI.Models;
 
 namespace TaskManagementAPI.Services;
 
+public class JwtConfigurationException : Exception
+{
+    public JwtConfigurationException(string message) : base(message)
+    {
+    }
+}
+
 public class TokenService : ITokenService
 {
+    // HS256 signing keys need at least 256 bits (32 bytes) to satisfy the token library's
+    // key-size requirements; a shorter secret throws when the token is signed.
+    public const int MinimumSecretBytes = 32;
+
     private readonly IConfiguration _config;
 
     public TokenService(IConfiguration config)
@@ -18,8 +29,16 @@ public class TokenService : ITokenService
     public (string Token, DateTime ExpiresAt) CreateToken(User user)
     {
         var jwtSection = _config.GetSection("Jwt");
-        var secret = jwtSection["Secret"]
-            ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
+        var secret = jwtSection["Secret"];
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            throw new JwtConfigurationException("Jwt:Secret is not configured.");
+        }
+        if (Encoding.UTF8.GetByteCount(secret) < MinimumSecretBytes)
+        {
+            throw new JwtConfigurationException(
+                $"Jwt:Secret must be at least {MinimumSecretBytes} bytes long for HS256 signing.");
+        }
         var issuer = jwtSection["Issuer"];
         var audience = jwtSection["Audience"];
         var expiryMinutes = int.TryParse(jwtSection["ExpiryMinutes"], out var minutes) ? minutes : 120;

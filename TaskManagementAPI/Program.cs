@@ -1,11 +1,13 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using TaskManagementAPI;
 using TaskManagementAPI.Data;
+using TaskManagementAPI.Dtos;
 using TaskManagementAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +17,30 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    })
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Replace the default ProblemDetails validation response with the same
+        // ApiErrorResponse envelope every other error path in this API returns.
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(kvp => kvp.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value!.Errors.Select(e => e.ErrorMessage).ToArray());
+
+            var response = new ApiErrorResponse
+            {
+                Success = false,
+                StatusCode = StatusCodes.Status400BadRequest,
+                Message = "One or more validation errors occurred.",
+                Errors = errors,
+                TraceId = context.HttpContext.TraceIdentifier
+            };
+
+            return new BadRequestObjectResult(response);
+        };
     });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -25,10 +51,23 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+// Required as a fallback registration by UseExceptionHandler() even though
+// GlobalExceptionHandler always handles the exception itself (see below).
 builder.Services.AddProblemDetails();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
-var jwtSecret = jwtSection["Secret"] ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
+var jwtSecret = jwtSection["Secret"];
+if (string.IsNullOrWhiteSpace(jwtSecret))
+{
+    throw new InvalidOperationException(
+        "Jwt:Secret is not configured. Set it in appsettings.json or via 'dotnet user-secrets set \"Jwt:Secret\" \"<value>\"'.");
+}
+if (Encoding.UTF8.GetByteCount(jwtSecret) < TokenService.MinimumSecretBytes)
+{
+    throw new InvalidOperationException(
+        $"Jwt:Secret must be at least {TokenService.MinimumSecretBytes} bytes ({TokenService.MinimumSecretBytes * 8} bits) long " +
+        $"for HS256 signing — it is currently {Encoding.UTF8.GetByteCount(jwtSecret)} bytes. Update it in appsettings.json.");
+}
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

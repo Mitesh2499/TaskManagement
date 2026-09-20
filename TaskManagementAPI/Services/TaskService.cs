@@ -48,8 +48,8 @@ public class TaskService : ITaskService
         {
             Title = request.Title,
             Description = request.Description,
-            Status = request.Status,
-            Priority = request.Priority,
+            Status = Enum.Parse<TaskState>(request.Status, ignoreCase: true),
+            Priority = Enum.Parse<TaskPriority>(request.Priority, ignoreCase: true),
             AssignedTo = request.AssignedTo
         };
 
@@ -69,8 +69,8 @@ public class TaskService : ITaskService
 
         task.Title = request.Title;
         task.Description = request.Description;
-        task.Status = request.Status;
-        task.Priority = request.Priority;
+        task.Status = Enum.Parse<TaskState>(request.Status, ignoreCase: true);
+        task.Priority = Enum.Parse<TaskPriority>(request.Priority, ignoreCase: true);
         task.AssignedTo = request.AssignedTo;
 
         await _db.SaveChangesAsync();

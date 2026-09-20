@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using TaskManagementAPI.Models;
+using TaskManagementAPI.Validation;
 
 namespace TaskManagementAPI.Dtos;
 
@@ -18,44 +19,44 @@ public class TaskDto
 public class CreateTaskRequest
 {
     [Required(ErrorMessage = "Title is required.")]
-    [MaxLength(200)]
+    [MaxLength(200, ErrorMessage = "Title must be at most 200 characters.")]
     public string Title { get; set; } = string.Empty;
 
-    [MaxLength(2000)]
+    [MaxLength(2000, ErrorMessage = "Description must be at most 2000 characters.")]
     public string? Description { get; set; }
 
-    [Required]
-    [EnumDataType(typeof(TaskState), ErrorMessage = "Status must be a valid status value.")]
-    public TaskState Status { get; set; }
+    [Required(ErrorMessage = "Status is required. Allowed values are: ToDo, InProgress, Done.")]
+    [ValidEnum(typeof(TaskState))]
+    public string Status { get; set; } = string.Empty;
 
-    [Required]
-    [EnumDataType(typeof(TaskPriority), ErrorMessage = "Priority must be a valid priority value.")]
-    public TaskPriority Priority { get; set; }
+    [Required(ErrorMessage = "Priority is required. Allowed values are: Low, Medium, High, Critical.")]
+    [ValidEnum(typeof(TaskPriority))]
+    public string Priority { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "AssignedTo is required.")]
-    [MaxLength(100)]
+    [MaxLength(100, ErrorMessage = "AssignedTo must be at most 100 characters.")]
     public string AssignedTo { get; set; } = string.Empty;
 }
 
 public class UpdateTaskRequest
 {
     [Required(ErrorMessage = "Title is required.")]
-    [MaxLength(200)]
+    [MaxLength(200, ErrorMessage = "Title must be at most 200 characters.")]
     public string Title { get; set; } = string.Empty;
 
-    [MaxLength(2000)]
+    [MaxLength(2000, ErrorMessage = "Description must be at most 2000 characters.")]
     public string? Description { get; set; }
 
-    [Required]
-    [EnumDataType(typeof(TaskState), ErrorMessage = "Status must be a valid status value.")]
-    public TaskState Status { get; set; }
+    [Required(ErrorMessage = "Status is required. Allowed values are: ToDo, InProgress, Done.")]
+    [ValidEnum(typeof(TaskState))]
+    public string Status { get; set; } = string.Empty;
 
-    [Required]
-    [EnumDataType(typeof(TaskPriority), ErrorMessage = "Priority must be a valid priority value.")]
-    public TaskPriority Priority { get; set; }
+    [Required(ErrorMessage = "Priority is required. Allowed values are: Low, Medium, High, Critical.")]
+    [ValidEnum(typeof(TaskPriority))]
+    public string Priority { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "AssignedTo is required.")]
-    [MaxLength(100)]
+    [MaxLength(100, ErrorMessage = "AssignedTo must be at most 100 characters.")]
     public string AssignedTo { get; set; } = string.Empty;
 }
 
