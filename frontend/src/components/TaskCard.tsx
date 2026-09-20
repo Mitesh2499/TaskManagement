@@ -1,4 +1,5 @@
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/Avatar";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { Button } from "@/components/ui/button";
@@ -18,17 +19,32 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
+  const navigate = useNavigate();
+
   return (
-    <div className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm transition hover:shadow-md">
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => navigate(`/tasks/${task.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") navigate(`/tasks/${task.id}`);
+      }}
+      className="cursor-pointer rounded-xl border bg-card p-4 text-card-foreground shadow-sm transition hover:shadow-md"
+    >
       <div className="flex items-start justify-between gap-2">
         <PriorityBadge priority={task.priority} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label="Task actions">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Task actions"
+              onClick={(e) => e.stopPropagation()}
+            >
               <MoreHorizontalIcon />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={() => onEdit(task)}>
                 <PencilIcon />

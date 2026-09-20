@@ -15,6 +15,11 @@ export async function getTasks(filter: TaskFilter = {}): Promise<PagedResult<Tas
   return data;
 }
 
+export async function getTaskById(id: number): Promise<Task> {
+  const { data } = await apiClient.get<Task>(`/api/tasks/${id}`);
+  return data;
+}
+
 export async function getTaskSummary(): Promise<TaskSummaryRow[]> {
   const { data } = await apiClient.get<TaskSummaryRow[]>("/api/tasks/summary");
   return data;

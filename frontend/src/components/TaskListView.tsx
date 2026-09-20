@@ -1,4 +1,5 @@
 import { ClipboardListIcon, MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/Avatar";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { SortableTableHead } from "@/components/SortableTableHead";
@@ -45,6 +46,8 @@ export function TaskListView({
   sortDirection,
   onSortChange,
 }: TaskListViewProps) {
+  const navigate = useNavigate();
+
   if (tasks.length === 0) {
     return (
       <Empty className="border border-dashed bg-card">
@@ -89,14 +92,18 @@ export function TaskListView({
         </TableHeader>
         <TableBody>
           {tasks.map((task) => (
-            <TableRow key={task.id}>
+            <TableRow
+              key={task.id}
+              className="cursor-pointer"
+              onClick={() => navigate(`/tasks/${task.id}`)}
+            >
               <TableCell className="max-w-xs whitespace-normal">
                 <p className="font-medium text-foreground">{task.title}</p>
                 {task.description && (
                   <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{task.description}</p>
                 )}
               </TableCell>
-              <TableCell>
+              <TableCell onClick={(e) => e.stopPropagation()}>
                 <StatusSelect value={task.status} onChange={(status) => onStatusChange(task, status)} />
               </TableCell>
               <TableCell>
@@ -109,7 +116,7 @@ export function TaskListView({
                 </div>
               </TableCell>
               <TableCell className="text-muted-foreground">{formatDate(task.modifiedDate)}</TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon-sm" aria-label="Task actions">
