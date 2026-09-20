@@ -3,6 +3,7 @@ import type { LoginRequest, RegisterRequest } from "@/types/auth";
 
 export interface AuthContextValue {
   token: string | null;
+  name: string | null;
   email: string | null;
   isAuthenticated: boolean;
   login: (request: LoginRequest) => Promise<void>;

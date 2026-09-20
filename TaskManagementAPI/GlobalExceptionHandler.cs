@@ -58,6 +58,11 @@ public class GlobalExceptionHandler : IExceptionHandler
                 exception.Message,
                 LogLevel.Information),
 
+            UserNotFoundException => (
+                StatusCodes.Status400BadRequest,
+                exception.Message,
+                LogLevel.Information),
+
             JwtConfigurationException => (
                 StatusCodes.Status500InternalServerError,
                 "Authentication is misconfigured on the server. Please contact support.",

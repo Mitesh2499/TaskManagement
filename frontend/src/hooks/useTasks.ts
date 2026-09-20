@@ -41,7 +41,7 @@ export function useTasks(filter: TaskFilter) {
       hasLoadedOnce.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter.status, filter.priority, filter.search, filter.page, filter.pageSize]);
+  }, [filter.status, filter.priority, filter.search, filter.assignedToUserId, filter.page, filter.pageSize]);
 
   useEffect(() => {
     // Fetching from the API on mount/filter-change is the standard "synchronize with an

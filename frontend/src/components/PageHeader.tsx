@@ -21,7 +21,7 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ activeTab, onTabChange }: PageHeaderProps) {
-  const { email, logout } = useAuth();
+  const { name, email, logout } = useAuth();
 
   function handleLogout() {
     logout();
@@ -40,11 +40,12 @@ export function PageHeader({ activeTab, onTabChange }: PageHeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1 transition hover:bg-muted focus:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-            <Avatar name={email ?? "?"} size="default" />
+            <Avatar name={name ?? email ?? "?"} size="default" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel className="max-w-64 truncate font-normal text-foreground">
-              {email}
+            <DropdownMenuLabel className="max-w-64 font-normal text-foreground">
+              <p className="truncate font-medium">{name}</p>
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>

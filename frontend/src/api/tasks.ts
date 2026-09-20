@@ -9,6 +9,7 @@ export async function getTasks(filter: TaskFilter = {}): Promise<PagedResult<Tas
   if (filter.status) params.status = filter.status;
   if (filter.priority) params.priority = filter.priority;
   if (filter.search) params.search = filter.search;
+  if (filter.assignedToUserId) params.assignedToUserId = filter.assignedToUserId;
 
   const { data } = await apiClient.get<PagedResult<Task>>("/api/tasks", { params });
   return data;

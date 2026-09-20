@@ -7,7 +7,8 @@ public class TaskItem
     public string? Description { get; set; }
     public TaskState Status { get; set; }
     public TaskPriority Priority { get; set; }
-    public string AssignedTo { get; set; } = string.Empty;
+    public int AssignedToUserId { get; set; }
+    public User AssignedToUser { get; set; } = null!;
     public DateTime CreatedDate { get; set; }
     public DateTime ModifiedDate { get; set; }
     public bool IsDeleted { get; set; }

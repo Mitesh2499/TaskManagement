@@ -15,6 +15,7 @@ export function SignupPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -32,7 +33,7 @@ export function SignupPage() {
 
     setIsSubmitting(true);
     try {
-      await register({ email, password });
+      await register({ name, email, password });
       toast.success("Account created", { description: "You're all set." });
       navigate("/", { replace: true });
     } catch (err) {
@@ -54,6 +55,18 @@ export function SignupPage() {
               <AlertTitle>{error}</AlertTitle>
             </Alert>
           )}
+
+          <Field>
+            <FieldLabel htmlFor="name">Name</FieldLabel>
+            <Input
+              id="name"
+              required
+              maxLength={100}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Priya Nair"
+            />
+          </Field>
 
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>

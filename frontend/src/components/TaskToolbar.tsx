@@ -4,9 +4,11 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { STATUS_LABELS, TASK_PRIORITIES, TASK_STATUSES, type TaskPriority, type TaskStatus } from "@/types/task";
+import type { User } from "@/types/user";
 
 const ALL_STATUSES = "all";
 const ALL_PRIORITIES = "all";
+const ALL_ASSIGNEES = "all";
 
 interface TaskToolbarProps {
   search: string;
@@ -15,6 +17,9 @@ interface TaskToolbarProps {
   onStatusChange: (value: TaskStatus | "") => void;
   priority: TaskPriority | "";
   onPriorityChange: (value: TaskPriority | "") => void;
+  assignee: number | "";
+  onAssigneeChange: (value: number | "") => void;
+  users: User[];
   onNewTask: () => void;
   isFetching?: boolean;
 }
@@ -26,6 +31,9 @@ export function TaskToolbar({
   onStatusChange,
   priority,
   onPriorityChange,
+  assignee,
+  onAssigneeChange,
+  users,
   onNewTask,
   isFetching,
 }: TaskToolbarProps) {
@@ -77,6 +85,25 @@ export function TaskToolbar({
             {TASK_PRIORITIES.map((p) => (
               <SelectItem key={p} value={p}>
                 {p}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={assignee ? String(assignee) : ALL_ASSIGNEES}
+        onValueChange={(v) => onAssigneeChange(v === ALL_ASSIGNEES ? "" : Number(v))}
+      >
+        <SelectTrigger className="w-44">
+          <SelectValue placeholder="All assignees" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value={ALL_ASSIGNEES}>All assignees</SelectItem>
+            {users.map((user) => (
+              <SelectItem key={user.id} value={String(user.id)}>
+                {user.name}
               </SelectItem>
             ))}
           </SelectGroup>

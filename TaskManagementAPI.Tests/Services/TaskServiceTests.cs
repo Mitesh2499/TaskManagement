@@ -12,18 +12,31 @@ public class TaskServiceTests
 {
     private readonly AppDbContext _db;
     private readonly TaskService _sut;
+    private readonly User _alice;
+    private readonly User _bob;
 
     public TaskServiceTests()
     {
         _db = TestDb.CreateInMemory(nameof(TaskServiceTests));
         _sut = new TaskService(_db);
+
+        _alice = AddUser("Alice Chen", "alice@example.com");
+        _bob = AddUser("Bob Martinez", "bob@example.com");
+    }
+
+    private User AddUser(string name, string email)
+    {
+        var user = new User { Name = name, Email = email, PasswordHash = "hash", CreatedDate = DateTime.UtcNow };
+        _db.Users.Add(user);
+        _db.SaveChanges();
+        return user;
     }
 
     private TaskItem AddTask(
         string title,
         TaskState status,
         TaskPriority priority,
-        string assignedTo = "Alice",
+        User? assignedTo = null,
         bool isDeleted = false,
         DateTime? modifiedDate = null)
     {
@@ -33,7 +46,7 @@ public class TaskServiceTests
             Description = "desc",
             Status = status,
             Priority = priority,
-            AssignedTo = assignedTo,
+            AssignedToUserId = (assignedTo ?? _alice).Id,
             IsDeleted = isDeleted,
             CreatedDate = DateTime.UtcNow,
             ModifiedDate = modifiedDate ?? DateTime.UtcNow,
@@ -43,6 +56,15 @@ public class TaskServiceTests
         return task;
     }
 
+    private Task<PagedResult<TaskDto>> GetTasks(
+        TaskState? status = null,
+        TaskPriority? priority = null,
+        string? search = null,
+        int? assignedToUserId = null,
+        int page = 1,
+        int pageSize = 10) =>
+        _sut.GetTasksAsync(status, priority, search, assignedToUserId, page, pageSize);
+
     [Fact]
     public async Task GetTasksAsync_NoFilters_ReturnsAllNonDeletedTasks()
     {
@@ -50,7 +72,7 @@ public class TaskServiceTests
         AddTask("Task B", TaskState.Done, TaskPriority.High);
         AddTask("Deleted task", TaskState.ToDo, TaskPriority.Low, isDeleted: true);
 
-        var result = await _sut.GetTasksAsync(status: null, priority: null, search: null, page: 1, pageSize: 10);
+        var result = await GetTasks();
 
         result.TotalCount.Should().Be(2);
         result.Items.Select(t => t.Title).Should().BeEquivalentTo("Task A", "Task B");
@@ -62,7 +84,7 @@ public class TaskServiceTests
         AddTask("In progress task", TaskState.InProgress, TaskPriority.Medium);
         AddTask("Todo task", TaskState.ToDo, TaskPriority.Medium);
 
-        var result = await _sut.GetTasksAsync(TaskState.InProgress, null, null, 1, 10);
+        var result = await GetTasks(status: TaskState.InProgress);
 
         result.Items.Should().ContainSingle().Which.Title.Should().Be("In progress task");
     }
@@ -73,9 +95,20 @@ public class TaskServiceTests
         AddTask("Critical task", TaskState.ToDo, TaskPriority.Critical);
         AddTask("Low priority task", TaskState.ToDo, TaskPriority.Low);
 
-        var result = await _sut.GetTasksAsync(null, TaskPriority.Critical, null, 1, 10);
+        var result = await GetTasks(priority: TaskPriority.Critical);
 
         result.Items.Should().ContainSingle().Which.Title.Should().Be("Critical task");
+    }
+
+    [Fact]
+    public async Task GetTasksAsync_FiltersByAssignedToUserId()
+    {
+        AddTask("Alice's task", TaskState.ToDo, TaskPriority.Medium, _alice);
+        AddTask("Bob's task", TaskState.ToDo, TaskPriority.Medium, _bob);
+
+        var result = await GetTasks(assignedToUserId: _bob.Id);
+
+        result.Items.Should().ContainSingle().Which.Title.Should().Be("Bob's task");
     }
 
     [Theory]
@@ -84,23 +117,23 @@ public class TaskServiceTests
     [InlineData("Docker")]
     public async Task GetTasksAsync_SearchMatchesTitleCaseInsensitively(string term)
     {
-        AddTask("Set up Dockerfile for API", TaskState.ToDo, TaskPriority.Low, "Diego");
-        AddTask("Write README", TaskState.ToDo, TaskPriority.Low, "Alice");
+        AddTask("Set up Dockerfile for API", TaskState.ToDo, TaskPriority.Low);
+        AddTask("Write README", TaskState.ToDo, TaskPriority.Low);
 
-        var result = await _sut.GetTasksAsync(null, null, term, 1, 10);
+        var result = await GetTasks(search: term);
 
         result.Items.Should().ContainSingle().Which.Title.Should().Be("Set up Dockerfile for API");
     }
 
     [Fact]
-    public async Task GetTasksAsync_SearchMatchesAssignedTo()
+    public async Task GetTasksAsync_SearchMatchesAssignedToName()
     {
-        AddTask("Task A", TaskState.ToDo, TaskPriority.Low, assignedTo: "Priya Nair");
-        AddTask("Task B", TaskState.ToDo, TaskPriority.Low, assignedTo: "Bob Martinez");
+        AddTask("Task A", TaskState.ToDo, TaskPriority.Low, _alice);
+        AddTask("Task B", TaskState.ToDo, TaskPriority.Low, _bob);
 
-        var result = await _sut.GetTasksAsync(null, null, "priya", 1, 10);
+        var result = await GetTasks(search: "bob");
 
-        result.Items.Should().ContainSingle().Which.AssignedTo.Should().Be("Priya Nair");
+        result.Items.Should().ContainSingle().Which.AssignedToName.Should().Be("Bob Martinez");
     }
 
     [Fact]
@@ -114,7 +147,7 @@ public class TaskServiceTests
         AddTask("Critical", TaskState.ToDo, TaskPriority.Critical, modifiedDate: now);
         AddTask("High", TaskState.ToDo, TaskPriority.High, modifiedDate: now);
 
-        var result = await _sut.GetTasksAsync(null, null, null, 1, 10);
+        var result = await GetTasks();
 
         result.Items.Select(t => t.Title).Should().ContainInOrder("Critical", "High", "Medium", "Low");
     }
@@ -127,8 +160,8 @@ public class TaskServiceTests
             AddTask($"Task {i:D2}", TaskState.ToDo, TaskPriority.Medium, modifiedDate: DateTime.UtcNow.AddMinutes(-i));
         }
 
-        var page1 = await _sut.GetTasksAsync(null, null, null, page: 1, pageSize: 10);
-        var page2 = await _sut.GetTasksAsync(null, null, null, page: 2, pageSize: 10);
+        var page1 = await GetTasks(page: 1, pageSize: 10);
+        var page2 = await GetTasks(page: 2, pageSize: 10);
 
         page1.Items.Should().HaveCount(10);
         page2.Items.Should().HaveCount(5);
@@ -148,9 +181,9 @@ public class TaskServiceTests
     }
 
     [Fact]
-    public async Task GetTaskByIdAsync_ExistingTask_ReturnsMappedDto()
+    public async Task GetTaskByIdAsync_ExistingTask_ReturnsMappedDtoWithAssigneeName()
     {
-        var task = AddTask("Findable", TaskState.InProgress, TaskPriority.High, "Bob");
+        var task = AddTask("Findable", TaskState.InProgress, TaskPriority.High, _bob);
 
         var result = await _sut.GetTaskByIdAsync(task.Id);
 
@@ -158,7 +191,8 @@ public class TaskServiceTests
         result!.Title.Should().Be("Findable");
         result.Status.Should().Be(TaskState.InProgress);
         result.Priority.Should().Be(TaskPriority.High);
-        result.AssignedTo.Should().Be("Bob");
+        result.AssignedToUserId.Should().Be(_bob.Id);
+        result.AssignedToName.Should().Be("Bob Martinez");
     }
 
     [Fact]
@@ -170,7 +204,7 @@ public class TaskServiceTests
             Description = "Some description",
             Status = "ToDo",
             Priority = "High",
-            AssignedTo = "Alice",
+            AssignedToUserId = _alice.Id,
         };
 
         var result = await _sut.CreateTaskAsync(request);
@@ -178,6 +212,7 @@ public class TaskServiceTests
         result.Id.Should().BeGreaterThan(0);
         result.Status.Should().Be(TaskState.ToDo);
         result.Priority.Should().Be(TaskPriority.High);
+        result.AssignedToName.Should().Be("Alice Chen");
         result.CreatedDate.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         result.ModifiedDate.Should().Be(result.CreatedDate);
 
@@ -185,16 +220,32 @@ public class TaskServiceTests
     }
 
     [Fact]
+    public async Task CreateTaskAsync_UnknownAssignee_ThrowsUserNotFoundException()
+    {
+        var request = new CreateTaskRequest
+        {
+            Title = "New task",
+            Status = "ToDo",
+            Priority = "High",
+            AssignedToUserId = 9999,
+        };
+
+        var act = () => _sut.CreateTaskAsync(request);
+
+        await act.Should().ThrowAsync<UserNotFoundException>();
+    }
+
+    [Fact]
     public async Task UpdateTaskAsync_ExistingTask_UpdatesFieldsAndModifiedDate()
     {
-        var task = AddTask("Old title", TaskState.ToDo, TaskPriority.Low, modifiedDate: DateTime.UtcNow.AddDays(-1));
+        var task = AddTask("Old title", TaskState.ToDo, TaskPriority.Low, _alice, modifiedDate: DateTime.UtcNow.AddDays(-1));
         var request = new UpdateTaskRequest
         {
             Title = "New title",
             Description = "Updated",
             Status = "Done",
             Priority = "Critical",
-            AssignedTo = "Bob",
+            AssignedToUserId = _bob.Id,
         };
 
         var result = await _sut.UpdateTaskAsync(task.Id, request);
@@ -203,7 +254,8 @@ public class TaskServiceTests
         result!.Title.Should().Be("New title");
         result.Status.Should().Be(TaskState.Done);
         result.Priority.Should().Be(TaskPriority.Critical);
-        result.AssignedTo.Should().Be("Bob");
+        result.AssignedToUserId.Should().Be(_bob.Id);
+        result.AssignedToName.Should().Be("Bob Martinez");
         result.ModifiedDate.Should().BeAfter(result.CreatedDate);
     }
 
@@ -215,12 +267,29 @@ public class TaskServiceTests
             Title = "x",
             Status = "ToDo",
             Priority = "Low",
-            AssignedTo = "x",
+            AssignedToUserId = _alice.Id,
         };
 
         var result = await _sut.UpdateTaskAsync(id: 9999, request);
 
         result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateTaskAsync_UnknownAssignee_ThrowsUserNotFoundException()
+    {
+        var task = AddTask("Task", TaskState.ToDo, TaskPriority.Low, _alice);
+        var request = new UpdateTaskRequest
+        {
+            Title = "Task",
+            Status = "ToDo",
+            Priority = "Low",
+            AssignedToUserId = 9999,
+        };
+
+        var act = () => _sut.UpdateTaskAsync(task.Id, request);
+
+        await act.Should().ThrowAsync<UserNotFoundException>();
     }
 
     [Fact]

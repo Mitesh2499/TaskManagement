@@ -72,7 +72,7 @@ export function TaskListView({
             <SortableTableHead label="Priority" sortKey="priority" activeKey={sortKey} direction={sortDirection} onSort={onSortChange} />
             <SortableTableHead
               label="Assigned To"
-              sortKey="assignedTo"
+              sortKey="assignedToName"
               activeKey={sortKey}
               direction={sortDirection}
               onSort={onSortChange}
@@ -104,8 +104,8 @@ export function TaskListView({
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <Avatar name={task.assignedTo} />
-                  <span className="text-foreground">{task.assignedTo}</span>
+                  <Avatar name={task.assignedToName} />
+                  <span className="text-foreground">{task.assignedToName}</span>
                 </div>
               </TableCell>
               <TableCell className="text-muted-foreground">{formatDate(task.modifiedDate)}</TableCell>

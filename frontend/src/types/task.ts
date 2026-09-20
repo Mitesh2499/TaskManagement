@@ -8,7 +8,8 @@ export interface Task {
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
-  assignedTo: string;
+  assignedToUserId: number;
+  assignedToName: string;
   createdDate: string;
   modifiedDate: string;
 }
@@ -18,13 +19,14 @@ export interface TaskFormValues {
   description: string;
   status: TaskStatus;
   priority: TaskPriority;
-  assignedTo: string;
+  assignedToUserId: number;
 }
 
 export interface TaskFilter {
   status?: TaskStatus;
   priority?: TaskPriority;
   search?: string;
+  assignedToUserId?: number;
   page?: number;
   pageSize?: number;
 }

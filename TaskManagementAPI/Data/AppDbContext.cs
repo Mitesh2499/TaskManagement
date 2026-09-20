@@ -17,15 +17,20 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<TaskItem>(entity =>
         {
             entity.Property(t => t.Title).IsRequired().HasMaxLength(200);
-            entity.Property(t => t.AssignedTo).IsRequired().HasMaxLength(100);
             entity.Property(t => t.Description).HasMaxLength(2000);
             entity.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
             entity.Property(t => t.Priority).HasConversion<string>().HasMaxLength(20);
             entity.HasQueryFilter(t => !t.IsDeleted);
+
+            entity.HasOne(t => t.AssignedToUser)
+                .WithMany()
+                .HasForeignKey(t => t.AssignedToUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<User>(entity =>
         {
+            entity.Property(u => u.Name).IsRequired().HasMaxLength(100);
             entity.Property(u => u.Email).IsRequired().HasMaxLength(256);
             entity.Property(u => u.PasswordHash).IsRequired();
             entity.HasIndex(u => u.Email).IsUnique();

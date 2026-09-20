@@ -15,11 +15,16 @@ public class TaskServiceSummaryTests : IDisposable
     private readonly AppDbContext _db;
     private readonly Microsoft.Data.Sqlite.SqliteConnection _connection;
     private readonly TaskService _sut;
+    private readonly User _user;
 
     public TaskServiceSummaryTests()
     {
         (_db, _connection) = TestDb.CreateSqlite();
         _sut = new TaskService(_db);
+
+        _user = new User { Name = "Test User", Email = "user@example.com", PasswordHash = "hash", CreatedDate = DateTime.UtcNow };
+        _db.Users.Add(_user);
+        _db.SaveChanges();
     }
 
     public void Dispose()
@@ -35,7 +40,7 @@ public class TaskServiceSummaryTests : IDisposable
             Title = "t",
             Status = status,
             Priority = priority,
-            AssignedTo = "a",
+            AssignedToUserId = _user.Id,
             IsDeleted = isDeleted,
             CreatedDate = DateTime.UtcNow,
             ModifiedDate = DateTime.UtcNow,

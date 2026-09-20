@@ -50,8 +50,8 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
 
       <div className="mt-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Avatar name={task.assignedTo} />
-          <span className="text-xs text-muted-foreground">{task.assignedTo}</span>
+          <Avatar name={task.assignedToName} />
+          <span className="text-xs text-muted-foreground">{task.assignedToName}</span>
         </div>
         <span className="text-xs text-muted-foreground">
           {new Date(task.modifiedDate).toLocaleDateString(undefined, {

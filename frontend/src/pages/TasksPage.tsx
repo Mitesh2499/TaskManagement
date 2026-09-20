@@ -21,6 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useTasks } from "@/hooks/useTasks";
+import { useUsers } from "@/hooks/useUsers";
 import { getApiErrorMessage } from "@/lib/apiError";
 import { cn } from "@/lib/utils";
 import { sortTasks, type SortKey } from "@/lib/taskSort";
@@ -36,6 +37,7 @@ export function TasksPage() {
   const [activeTab, setActiveTab] = useState<TabId>("list");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "">("");
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | "">("");
+  const [assigneeFilter, setAssigneeFilter] = useState<number | "">("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -47,16 +49,18 @@ export function TasksPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
+  const { users } = useUsers();
 
   const filter = useMemo(
     () => ({
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
+      assignedToUserId: assigneeFilter || undefined,
       search: debouncedSearch || undefined,
       page: activeTab === "board" ? 1 : page,
       pageSize: activeTab === "board" ? BOARD_PAGE_SIZE : PAGE_SIZE,
     }),
-    [statusFilter, priorityFilter, debouncedSearch, page, activeTab],
+    [statusFilter, priorityFilter, assigneeFilter, debouncedSearch, page, activeTab],
   );
 
   const { tasks, totalCount, totalPages, isLoading, isFetching, error, createTask, updateTask, removeTask } =
@@ -82,6 +86,11 @@ export function TasksPage() {
 
   function handlePriorityFilterChange(value: TaskPriority | "") {
     setPriorityFilter(value);
+    setPage(1);
+  }
+
+  function handleAssigneeFilterChange(value: number | "") {
+    setAssigneeFilter(value);
     setPage(1);
   }
 
@@ -128,7 +137,7 @@ export function TasksPage() {
         description: task.description ?? "",
         status,
         priority: task.priority,
-        assignedTo: task.assignedTo,
+        assignedToUserId: task.assignedToUserId,
       });
       toast.success(`Marked as ${STATUS_LABELS[status]}`, { description: task.title });
     } catch (err) {
@@ -166,6 +175,9 @@ export function TasksPage() {
           onStatusChange={handleStatusFilterChange}
           priority={priorityFilter}
           onPriorityChange={handlePriorityFilterChange}
+          assignee={assigneeFilter}
+          onAssigneeChange={handleAssigneeFilterChange}
+          users={users}
           onNewTask={openCreateModal}
           isFetching={isFetching && !isLoading}
         />

@@ -11,7 +11,8 @@ public class TaskDto
     public string? Description { get; set; }
     public TaskState Status { get; set; }
     public TaskPriority Priority { get; set; }
-    public string AssignedTo { get; set; } = string.Empty;
+    public int AssignedToUserId { get; set; }
+    public string AssignedToName { get; set; } = string.Empty;
     public DateTime CreatedDate { get; set; }
     public DateTime ModifiedDate { get; set; }
 }
@@ -33,9 +34,9 @@ public class CreateTaskRequest
     [ValidEnum(typeof(TaskPriority))]
     public string Priority { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "AssignedTo is required.")]
-    [MaxLength(100, ErrorMessage = "AssignedTo must be at most 100 characters.")]
-    public string AssignedTo { get; set; } = string.Empty;
+    [Required(ErrorMessage = "AssignedToUserId is required.")]
+    [Range(1, int.MaxValue, ErrorMessage = "AssignedToUserId must reference a valid user.")]
+    public int AssignedToUserId { get; set; }
 }
 
 public class UpdateTaskRequest
@@ -55,9 +56,9 @@ public class UpdateTaskRequest
     [ValidEnum(typeof(TaskPriority))]
     public string Priority { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "AssignedTo is required.")]
-    [MaxLength(100, ErrorMessage = "AssignedTo must be at most 100 characters.")]
-    public string AssignedTo { get; set; } = string.Empty;
+    [Required(ErrorMessage = "AssignedToUserId is required.")]
+    [Range(1, int.MaxValue, ErrorMessage = "AssignedToUserId must reference a valid user.")]
+    public int AssignedToUserId { get; set; }
 }
 
 public class TaskQueryFilter
@@ -70,6 +71,8 @@ public class TaskQueryFilter
 
     [MaxLength(200, ErrorMessage = "Search must be at most 200 characters.")]
     public string? Search { get; set; }
+
+    public int? AssignedToUserId { get; set; }
 
     [Range(1, int.MaxValue, ErrorMessage = "Page must be 1 or greater.")]
     public int Page { get; set; } = 1;

@@ -18,6 +18,7 @@ public class TaskService : ITaskService
         TaskState? status,
         TaskPriority? priority,
         string? search,
+        int? assignedToUserId,
         int page,
         int pageSize)
     {
@@ -34,10 +35,15 @@ public class TaskService : ITaskService
             query = query.Where(t => t.Priority == priority);
         }
 
+        if (assignedToUserId is not null)
+        {
+            query = query.Where(t => t.AssignedToUserId == assignedToUserId);
+        }
+
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim();
-            query = query.Where(t => EF.Functions.Like(t.Title, $"%{term}%") || EF.Functions.Like(t.AssignedTo, $"%{term}%"));
+            query = query.Where(t => EF.Functions.Like(t.Title, $"%{term}%") || EF.Functions.Like(t.AssignedToUser.Name, $"%{term}%"));
         }
 
         // Count before paging, against the filtered-but-unpaged query.
@@ -56,14 +62,14 @@ public class TaskService : ITaskService
             .ThenBy(t => t.Id); // stable tie-break so Skip/Take pagination is deterministic
 
         var items = await query
+            .Include(t => t.AssignedToUser)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(t => MapToDto(t))
             .ToListAsync();
 
         return new PagedResult<TaskDto>
         {
-            Items = items,
+            Items = items.Select(MapToDto).ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = totalCount,
@@ -72,19 +78,23 @@ public class TaskService : ITaskService
 
     public async Task<TaskDto?> GetTaskByIdAsync(int id)
     {
-        var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == id);
+        var task = await _db.Tasks.Include(t => t.AssignedToUser).FirstOrDefaultAsync(t => t.Id == id);
         return task is null ? null : MapToDto(task);
     }
 
     public async Task<TaskDto> CreateTaskAsync(CreateTaskRequest request)
     {
+        var assignedToUser = await _db.Users.FindAsync(request.AssignedToUserId)
+            ?? throw new UserNotFoundException(request.AssignedToUserId);
+
         var task = new TaskItem
         {
             Title = request.Title,
             Description = request.Description,
             Status = Enum.Parse<TaskState>(request.Status, ignoreCase: true),
             Priority = Enum.Parse<TaskPriority>(request.Priority, ignoreCase: true),
-            AssignedTo = request.AssignedTo
+            AssignedToUserId = assignedToUser.Id,
+            AssignedToUser = assignedToUser,
         };
 
         _db.Tasks.Add(task);
@@ -95,17 +105,24 @@ public class TaskService : ITaskService
 
     public async Task<TaskDto?> UpdateTaskAsync(int id, UpdateTaskRequest request)
     {
-        var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == id);
+        var task = await _db.Tasks.Include(t => t.AssignedToUser).FirstOrDefaultAsync(t => t.Id == id);
         if (task is null)
         {
             return null;
+        }
+
+        if (task.AssignedToUserId != request.AssignedToUserId)
+        {
+            var assignedToUser = await _db.Users.FindAsync(request.AssignedToUserId)
+                ?? throw new UserNotFoundException(request.AssignedToUserId);
+            task.AssignedToUserId = assignedToUser.Id;
+            task.AssignedToUser = assignedToUser;
         }
 
         task.Title = request.Title;
         task.Description = request.Description;
         task.Status = Enum.Parse<TaskState>(request.Status, ignoreCase: true);
         task.Priority = Enum.Parse<TaskPriority>(request.Priority, ignoreCase: true);
-        task.AssignedTo = request.AssignedTo;
 
         await _db.SaveChangesAsync();
 
@@ -154,7 +171,8 @@ public class TaskService : ITaskService
         Description = task.Description,
         Status = task.Status,
         Priority = task.Priority,
-        AssignedTo = task.AssignedTo,
+        AssignedToUserId = task.AssignedToUserId,
+        AssignedToName = task.AssignedToUser.Name,
         CreatedDate = task.CreatedDate,
         ModifiedDate = task.ModifiedDate
     };

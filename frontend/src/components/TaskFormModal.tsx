@@ -8,16 +8,19 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
+import { useUsers } from "@/hooks/useUsers";
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/apiError";
 import { STATUS_LABELS, TASK_PRIORITIES, TASK_STATUSES, type Task, type TaskFormValues } from "@/types/task";
 
-const EMPTY_VALUES: TaskFormValues = {
-  title: "",
-  description: "",
-  status: "ToDo",
-  priority: "Medium",
-  assignedTo: "",
-};
+function emptyValues(defaultAssigneeId: number): TaskFormValues {
+  return {
+    title: "",
+    description: "",
+    status: "ToDo",
+    priority: "Medium",
+    assignedToUserId: defaultAssigneeId,
+  };
+}
 
 interface TaskFormModalProps {
   task: Task | null;
@@ -27,7 +30,8 @@ interface TaskFormModalProps {
 }
 
 export function TaskFormModal({ task, open, onOpenChange, onSubmit }: TaskFormModalProps) {
-  const [values, setValues] = useState<TaskFormValues>(EMPTY_VALUES);
+  const { users } = useUsers();
+  const [values, setValues] = useState<TaskFormValues>(() => emptyValues(0));
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,15 +47,15 @@ export function TaskFormModal({ task, open, onOpenChange, onSubmit }: TaskFormMo
         description: task.description ?? "",
         status: task.status,
         priority: task.priority,
-        assignedTo: task.assignedTo,
+        assignedToUserId: task.assignedToUserId,
       });
     } else {
-      setValues(EMPTY_VALUES);
+      setValues(emptyValues(users[0]?.id ?? 0));
     }
     setError(null);
     setFieldErrors({});
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [task, open]);
+  }, [task, open, users]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -157,20 +161,26 @@ export function TaskFormModal({ task, open, onOpenChange, onSubmit }: TaskFormMo
               </Field>
             </div>
 
-            <Field data-invalid={Boolean(fieldErrors.AssignedTo)}>
-              <FieldLabel htmlFor="assignedTo">Assigned to</FieldLabel>
-              <InputGroup>
-                <InputGroupInput
-                  id="assignedTo"
-                  required
-                  maxLength={100}
-                  placeholder="e.g. Priya Nair"
-                  value={values.assignedTo}
-                  onChange={(e) => setValues((v) => ({ ...v, assignedTo: e.target.value }))}
-                  aria-invalid={Boolean(fieldErrors.AssignedTo)}
-                />
-              </InputGroup>
-              <FieldError errors={fieldErrors.AssignedTo?.map((message) => ({ message }))} />
+            <Field data-invalid={Boolean(fieldErrors.AssignedToUserId)}>
+              <FieldLabel htmlFor="assignedToUserId">Assigned to</FieldLabel>
+              <Select
+                value={values.assignedToUserId ? String(values.assignedToUserId) : ""}
+                onValueChange={(v) => setValues((prev) => ({ ...prev, assignedToUserId: Number(v) }))}
+              >
+                <SelectTrigger id="assignedToUserId" className="w-full" aria-invalid={Boolean(fieldErrors.AssignedToUserId)}>
+                  <SelectValue placeholder="Select a team member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={String(user.id)}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <FieldError errors={fieldErrors.AssignedToUserId?.map((message) => ({ message }))} />
             </Field>
           </FieldGroup>
 

@@ -4,6 +4,10 @@ namespace TaskManagementAPI.Dtos;
 
 public class RegisterRequest
 {
+    [Required(ErrorMessage = "Name is required.")]
+    [MaxLength(100, ErrorMessage = "Name must be at most 100 characters.")]
+    public string Name { get; set; } = string.Empty;
+
     [Required(ErrorMessage = "Email is required.")]
     [EmailAddress(ErrorMessage = "A valid email address is required.")]
     [MaxLength(256)]
@@ -27,6 +31,7 @@ public class LoginRequest
 public class AuthResponse
 {
     public string Token { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
 }

@@ -28,6 +28,7 @@ public class AuthService : IAuthService
 
         var user = new User
         {
+            Name = request.Name.Trim(),
             Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             CreatedDate = DateTime.UtcNow
@@ -68,6 +69,7 @@ public class AuthService : IAuthService
         return new AuthResponse
         {
             Token = token,
+            Name = user.Name,
             Email = user.Email,
             ExpiresAt = expiresAt
         };

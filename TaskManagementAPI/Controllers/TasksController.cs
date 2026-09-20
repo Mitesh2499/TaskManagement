@@ -24,7 +24,7 @@ public class TasksController : ControllerBase
         var status = string.IsNullOrWhiteSpace(filter.Status) ? null : (TaskState?)Enum.Parse<TaskState>(filter.Status, ignoreCase: true);
         var priority = string.IsNullOrWhiteSpace(filter.Priority) ? null : (TaskPriority?)Enum.Parse<TaskPriority>(filter.Priority, ignoreCase: true);
 
-        var result = await _taskService.GetTasksAsync(status, priority, filter.Search, filter.Page, filter.PageSize);
+        var result = await _taskService.GetTasksAsync(status, priority, filter.Search, filter.AssignedToUserId, filter.Page, filter.PageSize);
         return Ok(result);
     }
 
