@@ -5,7 +5,7 @@ namespace TaskManagementAPI.Services;
 
 public interface ITaskService
 {
-    Task<IEnumerable<TaskDto>> GetTasksAsync(TaskState? status, TaskPriority? priority);
+    Task<PagedResult<TaskDto>> GetTasksAsync(TaskState? status, TaskPriority? priority, string? search, int page, int pageSize);
     Task<TaskDto?> GetTaskByIdAsync(int id);
     Task<TaskDto> CreateTaskAsync(CreateTaskRequest request);
     Task<TaskDto?> UpdateTaskAsync(int id, UpdateTaskRequest request);

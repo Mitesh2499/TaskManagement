@@ -14,7 +14,12 @@ public class TaskService : ITaskService
         _db = db;
     }
 
-    public async Task<IEnumerable<TaskDto>> GetTasksAsync(TaskState? status, TaskPriority? priority)
+    public async Task<PagedResult<TaskDto>> GetTasksAsync(
+        TaskState? status,
+        TaskPriority? priority,
+        string? search,
+        int page,
+        int pageSize)
     {
         // LINQ requirement: dynamic filtering + sorting over the task set.
         var query = _db.Tasks.AsQueryable();
@@ -29,11 +34,40 @@ public class TaskService : ITaskService
             query = query.Where(t => t.Priority == priority);
         }
 
-        query = query
-            .OrderByDescending(t => t.Priority)
-            .ThenByDescending(t => t.ModifiedDate);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(t => EF.Functions.Like(t.Title, $"%{term}%") || EF.Functions.Like(t.AssignedTo, $"%{term}%"));
+        }
 
-        return await query.Select(t => MapToDto(t)).ToListAsync();
+        // Count before paging, against the filtered-but-unpaged query.
+        var totalCount = await query.CountAsync();
+
+        query = query
+            // Priority is persisted as a string (see AppDbContext's HasConversion<string>()), so
+            // ordering by the enum directly would sort alphabetically ("Medium" > "Low" > "High" >
+            // "Critical") instead of by actual urgency. This nested-ternary form translates to a SQL
+            // CASE expression, giving true severity ordering: Critical > High > Medium > Low.
+            .OrderByDescending(t =>
+                t.Priority == TaskPriority.Critical ? 3 :
+                t.Priority == TaskPriority.High ? 2 :
+                t.Priority == TaskPriority.Medium ? 1 : 0)
+            .ThenByDescending(t => t.ModifiedDate)
+            .ThenBy(t => t.Id); // stable tie-break so Skip/Take pagination is deterministic
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(t => MapToDto(t))
+            .ToListAsync();
+
+        return new PagedResult<TaskDto>
+        {
+            Items = items,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+        };
     }
 
     public async Task<TaskDto?> GetTaskByIdAsync(int id)

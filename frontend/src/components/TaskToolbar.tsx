@@ -2,6 +2,7 @@ import { PlusIcon, SearchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { STATUS_LABELS, TASK_PRIORITIES, TASK_STATUSES, type TaskPriority, type TaskStatus } from "@/types/task";
 
 const ALL_STATUSES = "all";
@@ -15,6 +16,7 @@ interface TaskToolbarProps {
   priority: TaskPriority | "";
   onPriorityChange: (value: TaskPriority | "") => void;
   onNewTask: () => void;
+  isFetching?: boolean;
 }
 
 export function TaskToolbar({
@@ -25,6 +27,7 @@ export function TaskToolbar({
   priority,
   onPriorityChange,
   onNewTask,
+  isFetching,
 }: TaskToolbarProps) {
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -39,6 +42,8 @@ export function TaskToolbar({
           placeholder="Search by title or assignee…"
         />
       </InputGroup>
+
+      {isFetching && <Spinner className="text-muted-foreground" aria-label="Refreshing tasks" />}
 
       <Select
         value={status || ALL_STATUSES}

@@ -256,7 +256,7 @@ src/
 ## 4. Delivery checklist mapping (from the challenge doc)
 
 | Requirement | Where it's covered |
-|---|---|
+|---|---|e
 | List + filter by status/priority | §1.7 GET /api/tasks |
 | Get by id | §1.7 GET /api/tasks/{id} |
 | Create | §1.7 POST |

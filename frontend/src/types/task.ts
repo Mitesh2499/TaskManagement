@@ -24,6 +24,17 @@ export interface TaskFormValues {
 export interface TaskFilter {
   status?: TaskStatus;
   priority?: TaskPriority;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
 }
 
 export interface TaskSummaryRow {

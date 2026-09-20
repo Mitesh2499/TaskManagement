@@ -19,13 +19,13 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks([FromQuery] TaskQueryFilter filter)
+    public async Task<ActionResult<PagedResult<TaskDto>>> GetTasks([FromQuery] TaskQueryFilter filter)
     {
         var status = string.IsNullOrWhiteSpace(filter.Status) ? null : (TaskState?)Enum.Parse<TaskState>(filter.Status, ignoreCase: true);
         var priority = string.IsNullOrWhiteSpace(filter.Priority) ? null : (TaskPriority?)Enum.Parse<TaskPriority>(filter.Priority, ignoreCase: true);
 
-        var tasks = await _taskService.GetTasksAsync(status, priority);
-        return Ok(tasks);
+        var result = await _taskService.GetTasksAsync(status, priority, filter.Search, filter.Page, filter.PageSize);
+        return Ok(result);
     }
 
     // Mapped before {id} so "summary" isn't captured as a route parameter.

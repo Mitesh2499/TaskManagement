@@ -1,6 +1,7 @@
 import { ClipboardListIcon, MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import { SortableTableHead } from "@/components/SortableTableHead";
 import { StatusSelect } from "@/components/StatusSelect";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { SortDirection, SortKey } from "@/lib/taskSort";
 import type { Task, TaskStatus } from "@/types/task";
 
 interface TaskListViewProps {
@@ -20,6 +22,9 @@ interface TaskListViewProps {
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onNewTask: () => void;
+  sortKey: SortKey;
+  sortDirection: SortDirection;
+  onSortChange: (key: SortKey) => void;
 }
 
 function formatDate(value: string) {
@@ -30,7 +35,16 @@ function formatDate(value: string) {
   });
 }
 
-export function TaskListView({ tasks, onStatusChange, onEdit, onDelete, onNewTask }: TaskListViewProps) {
+export function TaskListView({
+  tasks,
+  onStatusChange,
+  onEdit,
+  onDelete,
+  onNewTask,
+  sortKey,
+  sortDirection,
+  onSortChange,
+}: TaskListViewProps) {
   if (tasks.length === 0) {
     return (
       <Empty className="border border-dashed bg-card">
@@ -53,11 +67,23 @@ export function TaskListView({ tasks, onStatusChange, onEdit, onDelete, onNewTas
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Task</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Priority</TableHead>
-            <TableHead>Assigned To</TableHead>
-            <TableHead>Modified</TableHead>
+            <SortableTableHead label="Task" sortKey="title" activeKey={sortKey} direction={sortDirection} onSort={onSortChange} />
+            <SortableTableHead label="Status" sortKey="status" activeKey={sortKey} direction={sortDirection} onSort={onSortChange} />
+            <SortableTableHead label="Priority" sortKey="priority" activeKey={sortKey} direction={sortDirection} onSort={onSortChange} />
+            <SortableTableHead
+              label="Assigned To"
+              sortKey="assignedTo"
+              activeKey={sortKey}
+              direction={sortDirection}
+              onSort={onSortChange}
+            />
+            <SortableTableHead
+              label="Modified"
+              sortKey="modifiedDate"
+              activeKey={sortKey}
+              direction={sortDirection}
+              onSort={onSortChange}
+            />
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>

@@ -1,21 +1,23 @@
 # Task Management App
 
-A lightweight task management system for an internal team: a .NET 8 Web API backed by SQL Server (EF Core, Code First) with JWT email/password authentication, and a React + TypeScript front-end (Vite + Tailwind).
+A lightweight task management system for an internal team: a .NET 8 Web API backed by SQL Server (EF Core, Code First) with JWT email/password authentication, and a React + TypeScript front-end (Vite + Tailwind CSS v4 + shadcn/ui) with a Kanban board and a sortable/filterable list view.
 
-See [PLAN.md](PLAN.md) for the full design plan and requirement-to-implementation mapping.
+See [PLAN.md](PLAN.md) for the original design plan and requirement-to-implementation mapping, and [TESTING.md](TESTING.md) for the backend unit test suite and coverage report.
 
 ## Project layout
 
 ```
-TaskManagementAPI/   .NET 8 Web API (EF Core, JWT auth, task CRUD + summary endpoint)
-frontend/             React + Vite + TypeScript + Tailwind CSS (task board UI)
-TaskManagement.slnx   Solution file referencing the API project
-PLAN.md               Design plan and requirement checklist
+TaskManagementAPI/       .NET 8 Web API — EF Core, JWT auth, task CRUD + summary endpoint
+TaskManagementAPI.Tests/ xUnit tests for the service layer (see TESTING.md)
+frontend/                React 19 + Vite + TypeScript + Tailwind v4 + shadcn/ui
+TaskManagement.slnx      Solution file
+PLAN.md                  Original design plan and requirement checklist
+TESTING.md               Unit test suite, coverage report, and how to regenerate it
 ```
 
 ## Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (or a newer SDK that can still target `net8.0` — confirm with `dotnet --list-sdks` / `dotnet --list-runtimes`, the `Microsoft.AspNetCore.App 8.0.x` and `Microsoft.NETCore.App 8.0.x` runtimes must be present)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (or a newer SDK that can still target `net8.0` — confirm with `dotnet --list-sdks` / `dotnet --list-runtimes`; the `Microsoft.AspNetCore.App 8.0.x` and `Microsoft.NETCore.App 8.0.x` runtimes must be present)
 - SQL Server reachable from your machine — either:
   - a local SQL Server instance (Developer/Express edition) running on `localhost`, or
   - SQL Server LocalDB (ships with Visual Studio), or
@@ -49,7 +51,7 @@ dotnet user-secrets init
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your connection string>"
 ```
 
-The `Jwt:Secret` value in the same file is a **development-only** placeholder — replace it (or override via user-secrets the same way) before deploying anywhere real.
+The `Jwt:Secret` value in the same file is a **development-only** placeholder — replace it (or override via user-secrets the same way) before deploying anywhere real. It must be at least 32 bytes long; the app fails fast at startup with a clear error if it's missing or too short.
 
 ### 1.2 Install the EF Core CLI tool (first time only)
 
@@ -90,14 +92,19 @@ By default this listens on `http://localhost:5263` and `https://localhost:7169` 
 |---|---|---|---|
 | POST | `/api/auth/register` | none | `{ email, password }` → creates a user, returns a JWT |
 | POST | `/api/auth/login` | none | `{ email, password }` → returns a JWT |
-| GET | `/api/tasks?status=&priority=` | bearer token | optional filtering by status/priority |
+| GET | `/api/tasks?status=&priority=&search=&page=&pageSize=` | bearer token | server-side filtering (status/priority), search (title or assignee, case-insensitive), and pagination — returns `{ items, page, pageSize, totalCount, totalPages }` |
 | GET | `/api/tasks/summary` | bearer token | raw-SQL grouped count by status + priority |
 | GET | `/api/tasks/{id}` | bearer token | 404 if not found or soft-deleted |
 | POST | `/api/tasks` | bearer token | create a task |
 | PUT | `/api/tasks/{id}` | bearer token | full update |
 | DELETE | `/api/tasks/{id}` | bearer token | soft-delete (sets `IsDeleted = true`) |
 
-`Status` values: `ToDo`, `InProgress`, `Done`. `Priority` values: `Low`, `Medium`, `High`, `Critical`.
+`Status` values: `ToDo`, `InProgress`, `Done`. `Priority` values: `Low`, `Medium`, `High`, `Critical`. `page` defaults to 1, `pageSize` defaults to 10 (max 100). Results are sorted by priority (true severity order — Critical > High > Medium > Low, not alphabetical) then most-recently-modified first.
+
+Every error response (validation, auth, not-found, unhandled exceptions) uses the same consistent envelope:
+```json
+{ "success": false, "statusCode": 400, "message": "...", "errors": { "Field": ["..."] }, "traceId": "..." }
+```
 
 ### 1.6 Quick smoke test (curl)
 
@@ -118,22 +125,46 @@ npm install
 npm run dev
 ```
 
-This starts the Vite dev server at `http://localhost:5173`. Configure the API base URL via a `.env` file in `frontend/`:
+This starts the Vite dev server, normally at `http://localhost:5173` (Vite auto-increments to 5174/5175 if that port is busy — the API's CORS policy already allows all three).
+
+Configure the API base URL via a `.env` file in `frontend/` (copy `.env.example`):
 
 ```
 VITE_API_URL=http://localhost:5263
 ```
 
-(Copy `.env.example` if present, or create `.env` with the line above — it must match whichever URL/port the API is actually listening on from step 1.4.)
+Adjust this to match whichever URL/port the API is actually listening on from step 1.4.
 
-> Note: the front-end currently ships as the default Vite + React + Tailwind scaffold. The task board, login/signup pages, and API integration described in [PLAN.md](PLAN.md) are the next implementation phase.
+### 2.1 What's in the frontend
+
+- **Auth**: `/login` and `/signup` pages backed by `POST /api/auth/login` / `/register`. The JWT is stored client-side and attached to every API request via an axios interceptor; an expired/invalid token automatically redirects back to `/login`.
+- **Tasks page** (`/`, behind a `ProtectedRoute`): a top nav with a user menu (email + logout), and two views:
+  - **List** — a table with an inline status dropdown (calls `PUT` immediately), priority badges, client-side column sorting (click a header to sort/reverse), a debounced search box (waits 400ms after you stop typing before hitting the server), status/priority filters, and server-side pagination (10 rows/page) via the API's `GET /api/tasks?status=&priority=&search=&page=&pageSize=`. Changing a filter or the search term resets back to page 1.
+  - **Board** — a Kanban layout grouped by status (`To Do` / `In Progress` / `Done`); it requests a single large page so every task is visible grouped by column rather than paged.
+- Both views share the same create/edit dialog (`POST`/`PUT /api/tasks`) and a confirmation dialog before delete (`DELETE /api/tasks/{id}`, soft-delete).
+- Every action (create, update, status change, delete, login, signup, logout) shows a toast notification confirming success or explaining the failure.
+- Built with [shadcn/ui](https://ui.shadcn.com) components (Radix primitives + Tailwind v4) — see `frontend/components.json` and `frontend/src/components/ui/`. To add more components: `npx shadcn@latest add <component>` from inside `frontend/`.
+
+### 2.2 Frontend structure
+
+```
+frontend/src/
+  api/            axios client + typed calls (auth.ts, tasks.ts)
+  auth/           AuthContext, useAuth hook, ProtectedRoute
+  components/     app-level components (TaskListView, TaskBoard, TaskFormModal, PageHeader, ...)
+  components/ui/  shadcn/ui primitives (button, dialog, select, table, sonner, ...)
+  hooks/          useTasks — fetch/create/update/delete with loading & error state
+  lib/            utils.ts (cn helper), apiError.ts (maps API errors to display messages)
+  pages/          LoginPage, SignupPage, TasksPage
+  types/          Task/TaskStatus/TaskPriority and Auth request/response types matching the API DTOs
+```
 
 ## 3. Running both together
 
 1. Start the API (`dotnet run` in `TaskManagementAPI/`) — leave it running.
 2. Start the front-end (`npm run dev` in `frontend/`) — leave it running.
-3. Open `http://localhost:5173` in a browser.
-4. Log in with `demo@example.com` / `Password123!` (once the login UI is implemented), or exercise the API directly via Swagger/curl in the meantime.
+3. Open the printed Vite URL (e.g. `http://localhost:5173`) in a browser.
+4. Log in with `demo@example.com` / `Password123!`, or sign up a new account.
 
 ## Running EF Core migrations after a model change
 
@@ -145,6 +176,7 @@ dotnet tool run dotnet-ef database update
 
 ## Troubleshooting
 
-- **`Jwt:Secret is not configured`** — make sure `appsettings.json` (or a user-secret / environment variable override) has a non-empty `Jwt:Secret`.
+- **`Jwt:Secret is not configured` / too short** — make sure `appsettings.json` (or a user-secret / environment variable override) has a `Jwt:Secret` of at least 32 bytes.
 - **Cannot connect to SQL Server** — verify the server is running and reachable, and that the connection string's auth mode (Windows `Trusted_Connection` vs. SQL `User Id`/`Password`) matches how your SQL Server instance is configured.
-- **CORS errors in the browser** — the API only allows `http://localhost:5173` by default (see `Program.cs`); update the CORS policy if the front-end runs on a different port.
+- **CORS errors in the browser** — the API allows `http://localhost:5173`, `5174`, and `5175` by default (see the CORS policy in `Program.cs`); update it if the front-end runs on a different port. Also make sure `app.UseCors(...)` is registered before `app.UseHttpsRedirection()` — a CORS preflight that hits the HTTPS redirect first will fail even with a correct policy.
+- **401 on every request from the frontend** — check that `frontend/.env`'s `VITE_API_URL` points at the port the API actually printed on startup, and that you're logged in (an expired token auto-redirects to `/login`).

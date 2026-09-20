@@ -67,6 +67,15 @@ public class TaskQueryFilter
 
     [ValidEnum(typeof(TaskPriority))]
     public string? Priority { get; set; }
+
+    [MaxLength(200, ErrorMessage = "Search must be at most 200 characters.")]
+    public string? Search { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "Page must be 1 or greater.")]
+    public int Page { get; set; } = 1;
+
+    [Range(1, 100, ErrorMessage = "PageSize must be between 1 and 100.")]
+    public int PageSize { get; set; } = 10;
 }
 
 public class TaskSummaryDto

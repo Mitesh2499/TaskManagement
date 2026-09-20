@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="TaskManagementAPI/TaskManagementAPI.csproj" />
+  <Project Path="TaskManagementAPI.Tests/TaskManagementAPI.Tests.csproj" />
 </Solution>

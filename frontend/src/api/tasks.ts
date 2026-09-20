@@ -1,12 +1,16 @@
 import { apiClient } from "@/api/client";
-import type { Task, TaskFilter, TaskFormValues, TaskSummaryRow } from "@/types/task";
+import type { PagedResult, Task, TaskFilter, TaskFormValues, TaskSummaryRow } from "@/types/task";
 
-export async function getTasks(filter: TaskFilter = {}): Promise<Task[]> {
-  const params: Record<string, string> = {};
+export async function getTasks(filter: TaskFilter = {}): Promise<PagedResult<Task>> {
+  const params: Record<string, string | number> = {
+    page: filter.page ?? 1,
+    pageSize: filter.pageSize ?? 10,
+  };
   if (filter.status) params.status = filter.status;
   if (filter.priority) params.priority = filter.priority;
+  if (filter.search) params.search = filter.search;
 
-  const { data } = await apiClient.get<Task[]>("/api/tasks", { params });
+  const { data } = await apiClient.get<PagedResult<Task>>("/api/tasks", { params });
   return data;
 }
 

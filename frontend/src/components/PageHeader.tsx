@@ -25,7 +25,7 @@ export function PageHeader({ activeTab, onTabChange }: PageHeaderProps) {
 
   function handleLogout() {
     logout();
-    toast("Logged out");
+    toast.info("Logged out");
   }
 
   return (
