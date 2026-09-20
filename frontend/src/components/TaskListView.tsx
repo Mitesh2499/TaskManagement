@@ -98,7 +98,7 @@ export function TaskListView({
               className="cursor-pointer"
               onClick={() => navigate(`/tasks/${task.id}`)}
             >
-              <TableCell className="max-w-xs whitespace-normal">
+              <TableCell className="max-w-xs whitespace-normal wrap-break-word">
                 <p className="font-medium text-foreground">{task.title}</p>
                 {task.description && (
                   <RichTextView html={task.description} clamp={1} className="mt-0.5 text-xs text-muted-foreground" />

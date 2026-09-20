@@ -94,7 +94,7 @@ export function TaskCard({ task, onEdit, onDelete, overlay = false }: TaskCardPr
           </DropdownMenu>
         </div>
 
-        <h3 className="mt-3 text-sm font-semibold text-foreground">{task.title}</h3>
+        <h3 className="mt-3 text-sm font-semibold wrap-break-word text-foreground">{task.title}</h3>
         {task.description && (
           <RichTextView html={task.description} clamp={2} className="mt-1 text-muted-foreground" />
         )}

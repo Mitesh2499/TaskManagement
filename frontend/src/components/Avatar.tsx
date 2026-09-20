@@ -8,24 +8,24 @@ function getInitials(name: string) {
   return (first + last).toUpperCase() || "?";
 }
 
-// Deterministic per-name color so the same person always renders the same
-// swatch — distinct from the neutral theme since these represent identity, not state.
-const COLOR_VARS = [
-  "oklch(0.7 0.16 20)",
-  "oklch(0.75 0.15 70)",
-  "oklch(0.7 0.15 150)",
-  "oklch(0.7 0.13 230)",
-  "oklch(0.7 0.15 290)",
-  "oklch(0.7 0.18 330)",
-  "oklch(0.7 0.13 190)",
-];
-
-function getColor(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+// FNV-1a: a fast, well-distributed string hash — small changes in the input (or two names
+// sharing a prefix) still land on very different hash values, so nearby names don't
+// clump onto the same few hues the way a weaker hash or a small fixed palette would.
+function hashString(value: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
   }
-  return COLOR_VARS[hash % COLOR_VARS.length];
+  return hash >>> 0;
+}
+
+// Deterministic per-name color so the same person always renders the same swatch — the
+// hash picks a hue around the full color wheel (0-360°) at fixed saturation/lightness,
+// distinct from the neutral theme since these represent identity, not state.
+function getColor(name: string) {
+  const hue = hashString(name.trim().toLowerCase()) % 360;
+  return `oklch(0.7 0.15 ${hue})`;
 }
 
 interface AvatarProps {

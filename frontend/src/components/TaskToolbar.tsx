@@ -45,6 +45,7 @@ export function TaskToolbar({
         </InputGroupAddon>
         <InputGroupInput
           type="search"
+          maxLength={200}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search by title or assignee…"

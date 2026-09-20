@@ -50,7 +50,7 @@ export function ChangeLogList({ entries, isLoading, error, showTaskTitle, emptyM
         <li key={entry.id} className="flex gap-3">
           <Avatar name={entry.changedByName} />
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-foreground">
+            <p className="wrap-break-word text-sm text-foreground">
               <span className="font-medium">{entry.changedByName}</span> {ACTION_VERB[entry.action]}{" "}
               {showTaskTitle ? (
                 <button
@@ -65,7 +65,7 @@ export function ChangeLogList({ entries, isLoading, error, showTaskTitle, emptyM
               )}
             </p>
             {entry.action === "Updated" && (
-              <p className="mt-0.5 text-sm text-muted-foreground">{entry.summary}</p>
+              <p className="mt-0.5 wrap-break-word text-sm text-muted-foreground">{entry.summary}</p>
             )}
             <p className="mt-0.5 text-xs text-muted-foreground">{formatRelativeTime(entry.timestamp)}</p>
           </div>

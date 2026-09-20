@@ -89,8 +89,8 @@ public class TaskService : ITaskService
 
         var task = new TaskItem
         {
-            Title = request.Title,
-            Description = request.Description,
+            Title = request.Title.Trim(),
+            Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description,
             Status = Enum.Parse<TaskState>(request.Status, ignoreCase: true),
             Priority = Enum.Parse<TaskPriority>(request.Priority, ignoreCase: true),
             AssignedToUserId = assignedToUser.Id,
@@ -136,8 +136,8 @@ public class TaskService : ITaskService
             task.AssignedToUser = assignedToUser;
         }
 
-        task.Title = request.Title;
-        task.Description = request.Description;
+        task.Title = request.Title.Trim();
+        task.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description;
         task.Status = Enum.Parse<TaskState>(request.Status, ignoreCase: true);
         task.Priority = Enum.Parse<TaskPriority>(request.Priority, ignoreCase: true);
 

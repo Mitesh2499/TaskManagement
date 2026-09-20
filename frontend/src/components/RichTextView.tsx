@@ -26,7 +26,7 @@ export function RichTextView({ html, className, clamp }: RichTextViewProps) {
   return (
     <div
       className={cn(
-        "max-w-none text-sm text-foreground [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5",
+        "max-w-none wrap-break-word text-sm text-foreground [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5",
         clamp && `${CLAMP_CLASSES[clamp]} **:inline`,
         className,
       )}

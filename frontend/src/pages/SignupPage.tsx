@@ -26,6 +26,11 @@ export function SignupPage() {
     event.preventDefault();
     setError(null);
 
+    if (!name.trim()) {
+      setError("Name is required.");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -33,7 +38,7 @@ export function SignupPage() {
 
     setIsSubmitting(true);
     try {
-      await register({ name, email, password });
+      await register({ name: name.trim(), email: email.trim(), password });
       toast.success("Account created", { description: "You're all set." });
       navigate("/", { replace: true });
     } catch (err) {
@@ -74,6 +79,7 @@ export function SignupPage() {
               id="email"
               type="email"
               required
+              maxLength={256}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -87,6 +93,7 @@ export function SignupPage() {
               type="password"
               required
               minLength={8}
+              maxLength={72}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="At least 8 characters"
@@ -99,6 +106,7 @@ export function SignupPage() {
               id="confirmPassword"
               type="password"
               required
+              maxLength={72}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Re-enter your password"

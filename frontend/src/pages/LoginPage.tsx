@@ -57,6 +57,7 @@ export function LoginPage() {
               id="email"
               type="email"
               required
+              maxLength={256}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -69,6 +70,7 @@ export function LoginPage() {
               id="password"
               type="password"
               required
+              maxLength={256}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"

@@ -20,7 +20,7 @@ export function RichTextEditor({ value, onChange, placeholder, id }: RichTextEdi
       attributes: {
         id: id ?? "",
         class: cn(
-          "min-h-24 rounded-b-md px-3 py-2 text-sm text-foreground focus:outline-none",
+          "min-h-24 rounded-b-md px-3 py-2 text-sm text-foreground wrap-break-word focus:outline-none",
           "[&_ol]:list-decimal [&_ol]:my-1 [&_ol]:pl-5 [&_p]:my-1 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:my-1 [&_ul]:pl-5",
         ),
         "data-placeholder": placeholder ?? "",

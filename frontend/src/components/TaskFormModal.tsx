@@ -62,9 +62,16 @@ export function TaskFormModal({ task, open, onOpenChange, onSubmit }: TaskFormMo
     event.preventDefault();
     setError(null);
     setFieldErrors({});
+
+    const trimmedTitle = values.title.trim();
+    if (!trimmedTitle) {
+      setFieldErrors({ Title: ["Title is required."] });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await onSubmit(values);
+      await onSubmit({ ...values, title: trimmedTitle });
       onOpenChange(false);
     } catch (err) {
       setError(getApiErrorMessage(err));
