@@ -34,7 +34,17 @@ public class AuthService : IAuthService
         };
 
         _db.Users.Add(user);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Two concurrent registrations for the same email can both pass the AnyAsync
+            // check above before either commits; the unique index on Email is the real
+            // guard, and its violation surfaces here as a generic DbUpdateException.
+            throw new EmailAlreadyExistsException(normalizedEmail);
+        }
 
         return BuildAuthResponse(user);
     }

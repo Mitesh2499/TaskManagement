@@ -60,6 +60,15 @@ public class UpdateTaskRequest
     public string AssignedTo { get; set; } = string.Empty;
 }
 
+public class TaskQueryFilter
+{
+    [ValidEnum(typeof(TaskState))]
+    public string? Status { get; set; }
+
+    [ValidEnum(typeof(TaskPriority))]
+    public string? Priority { get; set; }
+}
+
 public class TaskSummaryDto
 {
     public TaskState Status { get; set; }

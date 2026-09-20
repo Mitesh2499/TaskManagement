@@ -24,7 +24,24 @@ builder.Services.AddControllers()
         // ApiErrorResponse envelope every other error path in this API returns.
         options.InvalidModelStateResponseFactory = context =>
         {
-            var errors = context.ModelState
+            var modelState = context.ModelState;
+
+            // A missing or syntactically-broken JSON body surfaces under the root key ("" or
+            // "$") plus a redundant "field is required" entry for the action parameter itself —
+            // collapse that noise into one clean message instead of leaking parser internals.
+            var isBodyParsingFailure = modelState.Keys.Any(key => key.Length == 0 || key == "$");
+            if (isBodyParsingFailure)
+            {
+                return new BadRequestObjectResult(new ApiErrorResponse
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    Message = "The request body is missing or is not valid JSON.",
+                    TraceId = context.HttpContext.TraceIdentifier
+                });
+            }
+
+            var errors = modelState
                 .Where(kvp => kvp.Value?.Errors.Count > 0)
                 .ToDictionary(
                     kvp => kvp.Key,
@@ -82,6 +99,40 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1)
+        };
+
+        // Without this, a missing/expired/malformed token returns an empty 401/403 body —
+        // give the frontend the same ApiErrorResponse envelope it gets everywhere else.
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+                var message = context.AuthenticateFailure is SecurityTokenExpiredException
+                    ? "Your session has expired. Please log in again."
+                    : "You must be logged in to perform this action.";
+                await context.Response.WriteAsJsonAsync(new ApiErrorResponse
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status401Unauthorized,
+                    Message = message,
+                    TraceId = context.HttpContext.TraceIdentifier
+                });
+            },
+            OnForbidden = async context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new ApiErrorResponse
+                {
+                    Success = false,
+                    StatusCode = StatusCodes.Status403Forbidden,
+                    Message = "You do not have permission to perform this action.",
+                    TraceId = context.HttpContext.TraceIdentifier
+                });
+            }
         };
     });
 

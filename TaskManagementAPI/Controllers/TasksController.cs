@@ -19,10 +19,11 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks(
-        [FromQuery] TaskState? status,
-        [FromQuery] TaskPriority? priority)
+    public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks([FromQuery] TaskQueryFilter filter)
     {
+        var status = string.IsNullOrWhiteSpace(filter.Status) ? null : (TaskState?)Enum.Parse<TaskState>(filter.Status, ignoreCase: true);
+        var priority = string.IsNullOrWhiteSpace(filter.Priority) ? null : (TaskPriority?)Enum.Parse<TaskPriority>(filter.Priority, ignoreCase: true);
+
         var tasks = await _taskService.GetTasksAsync(status, priority);
         return Ok(tasks);
     }
@@ -39,7 +40,9 @@ public class TasksController : ControllerBase
     public async Task<ActionResult<TaskDto>> GetTaskById(int id)
     {
         var task = await _taskService.GetTaskByIdAsync(id);
-        return task is null ? NotFound() : Ok(task);
+        return task is null
+            ? this.ApiError(StatusCodes.Status404NotFound, $"Task with id {id} was not found.")
+            : Ok(task);
     }
 
     [HttpPost]
@@ -53,13 +56,17 @@ public class TasksController : ControllerBase
     public async Task<ActionResult<TaskDto>> UpdateTask(int id, UpdateTaskRequest request)
     {
         var task = await _taskService.UpdateTaskAsync(id, request);
-        return task is null ? NotFound() : Ok(task);
+        return task is null
+            ? this.ApiError(StatusCodes.Status404NotFound, $"Task with id {id} was not found.")
+            : Ok(task);
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
         var deleted = await _taskService.SoftDeleteTaskAsync(id);
-        return deleted ? NoContent() : NotFound();
+        return deleted
+            ? NoContent()
+            : this.ApiError(StatusCodes.Status404NotFound, $"Task with id {id} was not found.");
     }
 }

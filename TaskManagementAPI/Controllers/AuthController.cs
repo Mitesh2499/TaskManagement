@@ -30,13 +30,7 @@ public class AuthController : ControllerBase
         var response = await _authService.LoginAsync(request);
         if (response is null)
         {
-            return Unauthorized(new ApiErrorResponse
-            {
-                Success = false,
-                StatusCode = StatusCodes.Status401Unauthorized,
-                Message = "The email or password you entered is incorrect.",
-                TraceId = HttpContext.TraceIdentifier
-            });
+            return this.ApiError(StatusCodes.Status401Unauthorized, "The email or password you entered is incorrect.");
         }
 
         return Ok(response);
