@@ -143,7 +143,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5174")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -181,9 +181,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-
+// CORS must run before UseHttpsRedirection: the frontend calls the plain-http port, and a
+// preflight OPTIONS request that hits the HTTPS redirect first gets back a 307 with no
+// Access-Control-Allow-Origin header, which the browser reports as a CORS failure.
 app.UseCors(CorsPolicyName);
+
+app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();

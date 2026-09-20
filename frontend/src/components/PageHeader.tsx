@@ -1,48 +1,42 @@
-import { ArrowLeft, ChevronRight, LayoutGrid, List, Search, Table2, Telescope, Clock } from "lucide-react";
-import { AvatarGroup } from "@/components/AvatarGroup";
+import { LayoutGrid, List, ListChecks, LogOut } from "lucide-react";
+import { useAuth } from "@/auth/useAuth";
 import { cn } from "@/lib/cn";
-import type { Assignee } from "@/types/task";
 
-export type TabId = "overview" | "board" | "list" | "table" | "timeline";
+export type TabId = "board" | "list";
 
 const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
-  { id: "overview", label: "Overview", icon: Telescope },
   { id: "board", label: "Board", icon: LayoutGrid },
   { id: "list", label: "List", icon: List },
-  { id: "table", label: "Table", icon: Table2 },
-  { id: "timeline", label: "Timeline", icon: Clock },
 ];
 
 interface PageHeaderProps {
-  members: Assignee[];
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
 }
 
-export function PageHeader({ members, activeTab, onTabChange }: PageHeaderProps) {
+export function PageHeader({ activeTab, onTabChange }: PageHeaderProps) {
+  const { email, logout } = useAuth();
+
   return (
     <header className="border-b border-gray-200 bg-white">
       <div className="flex items-center justify-between gap-4 px-6 py-3 sm:px-8">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <button
-            type="button"
-            aria-label="Back"
-            className="rounded-md p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <span>Team spaces</span>
-          <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
-          <span className="font-medium text-gray-700">Tasks</span>
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white">
+            <ListChecks className="h-4 w-4" />
+          </div>
+          <span className="font-semibold text-gray-900">Task Management</span>
         </div>
 
-        <div className="relative hidden w-64 sm:block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="search"
-            placeholder="Search"
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-1.5 pl-9 pr-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-violet-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
-          />
+        <div className="flex items-center gap-3">
+          <span className="hidden text-sm text-gray-500 sm:inline">{email}</span>
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+          >
+            <LogOut className="h-4 w-4" />
+            Log out
+          </button>
         </div>
       </div>
 
@@ -51,10 +45,9 @@ export function PageHeader({ members, activeTab, onTabChange }: PageHeaderProps)
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Tasks</h1>
           <p className="mt-1 text-sm text-gray-500">Track your team&apos;s work across every stage</p>
         </div>
-        <AvatarGroup assignees={members} size="md" max={4} />
       </div>
 
-      <nav className="flex gap-1 overflow-x-auto px-6 sm:px-8">
+      <nav className="flex gap-1 px-6 sm:px-8">
         {TABS.map(({ id, label, icon: Icon }) => {
           const isActive = id === activeTab;
           return (
