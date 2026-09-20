@@ -1,3 +1,4 @@
+import { useDroppable } from "@dnd-kit/core";
 import { TaskCard } from "@/components/TaskCard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,8 @@ interface BoardColumnProps {
 }
 
 export function BoardColumn({ status, tasks, onEdit, onDelete }: BoardColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+
   return (
     <div className="flex min-w-0 flex-col">
       <div className="flex items-center gap-2 px-1 pb-3">
@@ -25,7 +28,13 @@ export function BoardColumn({ status, tasks, onEdit, onDelete }: BoardColumnProp
         <Badge variant="secondary">{tasks.length}</Badge>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-xl bg-muted/40 p-2">
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "flex min-h-24 flex-col gap-3 rounded-xl bg-muted/40 p-2 outline-2 outline-offset-2 outline-transparent transition-colors",
+          isOver && "bg-muted outline-primary/40",
+        )}
+      >
         {tasks.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-muted-foreground">No tasks</p>
         ) : (

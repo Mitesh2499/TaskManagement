@@ -218,7 +218,12 @@ export function TasksPage() {
         ) : (
           <div className={cn("transition-opacity", isFetching && "opacity-60")}>
             {activeTab === "board" ? (
-              <TaskBoard tasks={sortedTasks} onEdit={openEditModal} onDelete={setTaskPendingDelete} />
+              <TaskBoard
+                tasks={sortedTasks}
+                onEdit={openEditModal}
+                onDelete={setTaskPendingDelete}
+                onStatusChange={handleStatusChange}
+              />
             ) : (
               <>
                 <TaskListView

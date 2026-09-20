@@ -1,3 +1,5 @@
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/Avatar";
@@ -11,26 +13,47 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import type { Task } from "@/types/task";
 
 interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
+  // Rendered inside <DragOverlay> as the floating "ghost" that follows the pointer —
+  // presentational only, so it skips its own drag wiring and click navigation.
+  overlay?: boolean;
 }
 
-export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
+export function TaskCard({ task, onEdit, onDelete, overlay = false }: TaskCardProps) {
   const navigate = useNavigate();
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: task.id,
+    disabled: overlay,
+  });
 
   return (
     <div
-      role="link"
-      tabIndex={0}
-      onClick={() => navigate(`/tasks/${task.id}`)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") navigate(`/tasks/${task.id}`);
-      }}
-      className="cursor-pointer rounded-xl border bg-card p-4 text-card-foreground shadow-sm transition hover:shadow-md"
+      ref={overlay ? undefined : setNodeRef}
+      style={transform ? { transform: CSS.Translate.toString(transform) } : undefined}
+      role={overlay ? undefined : "link"}
+      tabIndex={overlay ? undefined : 0}
+      {...(overlay ? {} : attributes)}
+      {...(overlay ? {} : listeners)}
+      onClick={overlay ? undefined : () => navigate(`/tasks/${task.id}`)}
+      onKeyDown={
+        overlay
+          ? undefined
+          : (e) => {
+              if (e.key === "Enter") navigate(`/tasks/${task.id}`);
+            }
+      }
+      className={cn(
+        "rounded-xl border bg-card p-4 text-card-foreground shadow-sm transition",
+        !overlay && "cursor-grab touch-none hover:shadow-md active:cursor-grabbing",
+        isDragging && "opacity-40",
+        overlay && "rotate-2 cursor-grabbing shadow-lg",
+      )}
     >
       <div className="flex items-start justify-between gap-2">
         <PriorityBadge priority={task.priority} />
@@ -41,6 +64,7 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
               size="icon-sm"
               aria-label="Task actions"
               onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               <MoreHorizontalIcon />
             </Button>
