@@ -1,9 +1,11 @@
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { STATUS_LABELS, TASK_STATUSES, type TaskStatus } from "@/types/task";
 
-const STATUS_SELECT_COLORS: Record<TaskStatus, string> = {
-  ToDo: "bg-amber-50 text-amber-700 border-amber-200",
-  InProgress: "bg-sky-50 text-sky-700 border-sky-200",
-  Done: "bg-emerald-50 text-emerald-700 border-emerald-200",
+const STATUS_TRIGGER_STYLES: Record<TaskStatus, string> = {
+  ToDo: "bg-status-todo text-status-todo-foreground",
+  InProgress: "bg-status-in-progress text-status-in-progress-foreground",
+  Done: "bg-status-done text-status-done-foreground",
 };
 
 interface StatusSelectProps {
@@ -14,17 +16,19 @@ interface StatusSelectProps {
 
 export function StatusSelect({ value, onChange, disabled }: StatusSelectProps) {
   return (
-    <select
-      value={value}
-      disabled={disabled}
-      onChange={(e) => onChange(e.target.value as TaskStatus)}
-      className={`cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:opacity-60 ${STATUS_SELECT_COLORS[value]}`}
-    >
-      {TASK_STATUSES.map((status) => (
-        <option key={status} value={status}>
-          {STATUS_LABELS[status]}
-        </option>
-      ))}
-    </select>
+    <Select value={value} onValueChange={(v) => onChange(v as TaskStatus)} disabled={disabled}>
+      <SelectTrigger className={cn("w-36 rounded-full border-transparent", STATUS_TRIGGER_STYLES[value])}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          {TASK_STATUSES.map((status) => (
+            <SelectItem key={status} value={status}>
+              {STATUS_LABELS[status]}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   );
 }

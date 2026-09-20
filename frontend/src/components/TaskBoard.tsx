@@ -1,11 +1,5 @@
 import { BoardColumn } from "@/components/BoardColumn";
-import { STATUS_LABELS, type Task, type TaskStatus } from "@/types/task";
-
-const COLUMNS: { status: TaskStatus; dotColorClass: string }[] = [
-  { status: "ToDo", dotColorClass: "bg-amber-500" },
-  { status: "InProgress", dotColorClass: "bg-sky-500" },
-  { status: "Done", dotColorClass: "bg-emerald-500" },
-];
+import { TASK_STATUSES, type Task } from "@/types/task";
 
 interface TaskBoardProps {
   tasks: Task[];
@@ -15,12 +9,17 @@ interface TaskBoardProps {
 
 export function TaskBoard({ tasks, onEdit, onDelete }: TaskBoardProps) {
   return (
-    <div className="flex gap-5 overflow-x-auto pb-6">
-      {COLUMNS.map(({ status, dotColorClass }) => (
+    <div
+      className="grid gap-5 pb-6"
+      style={{
+        gridTemplateColumns: `repeat(${Math.min(TASK_STATUSES.length, 3)}, minmax(0, 1fr))`,
+      }}
+    >
+      {" "}
+      {TASK_STATUSES.map((status) => (
         <BoardColumn
           key={status}
-          title={STATUS_LABELS[status]}
-          dotColorClass={dotColorClass}
+          status={status}
           tasks={tasks.filter((task) => task.status === status)}
           onEdit={onEdit}
           onDelete={onDelete}

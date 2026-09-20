@@ -1,6 +1,14 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Task } from "@/types/task";
 
 interface TaskCardProps {
@@ -11,40 +19,41 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
   return (
-    <div className="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+    <div className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm transition hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
         <PriorityBadge priority={task.priority} />
-        <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
-          <button
-            type="button"
-            aria-label="Edit task"
-            onClick={() => onEdit(task)}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            aria-label="Delete task"
-            onClick={() => onDelete(task)}
-            className="rounded-md p-1 text-gray-400 hover:bg-rose-50 hover:text-rose-500"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" aria-label="Task actions">
+              <MoreHorizontalIcon />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => onEdit(task)}>
+                <PencilIcon />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={() => onDelete(task)}>
+                <Trash2Icon />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      <h3 className="mt-3 text-sm font-semibold text-gray-900">{task.title}</h3>
+      <h3 className="mt-3 text-sm font-semibold text-foreground">{task.title}</h3>
       {task.description && (
-        <p className="mt-1 line-clamp-2 text-sm text-gray-500">{task.description}</p>
+        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{task.description}</p>
       )}
 
       <div className="mt-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Avatar name={task.assignedTo} />
-          <span className="text-xs text-gray-500">{task.assignedTo}</span>
+          <span className="text-xs text-muted-foreground">{task.assignedTo}</span>
         </div>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-muted-foreground">
           {new Date(task.modifiedDate).toLocaleDateString(undefined, {
             day: "2-digit",
             month: "short",

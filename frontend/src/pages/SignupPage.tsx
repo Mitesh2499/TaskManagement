@@ -1,6 +1,13 @@
 import { useState, type FormEvent } from "react";
+import { TriangleAlertIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { AuthCard } from "@/components/AuthCard";
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/auth/useAuth";
 import { getApiErrorMessage } from "@/lib/apiError";
 
@@ -26,9 +33,12 @@ export function SignupPage() {
     setIsSubmitting(true);
     try {
       await register({ email, password });
+      toast.success("Account created", { description: "You're all set." });
       navigate("/", { replace: true });
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      const message = getApiErrorMessage(err);
+      setError(message);
+      toast.error("Sign up failed", { description: message });
     } finally {
       setIsSubmitting(false);
     }
@@ -36,60 +46,62 @@ export function SignupPage() {
 
   return (
     <AuthCard title="Create your account" subtitle="Start tracking your team's tasks">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {error && (
-          <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</div>
-        )}
+      <form onSubmit={handleSubmit}>
+        <FieldGroup>
+          {error && (
+            <Alert variant="destructive">
+              <TriangleAlertIcon />
+              <AlertTitle>{error}</AlertTitle>
+            </Alert>
+          )}
 
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium text-gray-700">Email</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-            placeholder="you@example.com"
-          />
-        </label>
+          <Field>
+            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <Input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
+          </Field>
 
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium text-gray-700">Password</span>
-          <input
-            type="password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-            placeholder="At least 8 characters"
-          />
-        </label>
+          <Field>
+            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <Input
+              id="password"
+              type="password"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 8 characters"
+            />
+          </Field>
 
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium text-gray-700">Confirm password</span>
-          <input
-            type="password"
-            required
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-            placeholder="Re-enter your password"
-          />
-        </label>
+          <Field>
+            <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
+            <Input
+              id="confirmPassword"
+              type="password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter your password"
+            />
+          </Field>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="mt-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isSubmitting ? "Creating account…" : "Sign up"}
-        </button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting && <Spinner data-icon="inline-start" />}
+            {isSubmitting ? "Creating account…" : "Sign up"}
+          </Button>
+        </FieldGroup>
       </form>
 
-      <p className="mt-4 text-center text-sm text-gray-500">
+      <p className="mt-4 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link to="/login" className="font-medium text-violet-600 hover:underline">
+        <Link to="/login" className="font-medium text-primary hover:underline">
           Log in
         </Link>
       </p>

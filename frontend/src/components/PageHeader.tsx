@@ -1,13 +1,19 @@
-import { LayoutGrid, List, ListChecks, LogOut } from "lucide-react";
+import { LayoutGridIcon, ListIcon, ListChecksIcon, LogOutIcon } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/auth/useAuth";
-import { cn } from "@/lib/cn";
+import { Avatar } from "@/components/Avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export type TabId = "board" | "list";
-
-const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
-  { id: "board", label: "Board", icon: LayoutGrid },
-  { id: "list", label: "List", icon: List },
-];
 
 interface PageHeaderProps {
   activeTab: TabId;
@@ -17,57 +23,63 @@ interface PageHeaderProps {
 export function PageHeader({ activeTab, onTabChange }: PageHeaderProps) {
   const { email, logout } = useAuth();
 
+  function handleLogout() {
+    logout();
+    toast("Logged out");
+  }
+
   return (
-    <header className="border-b border-gray-200 bg-white">
+    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
       <div className="flex items-center justify-between gap-4 px-6 py-3 sm:px-8">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white">
-            <ListChecks className="h-4 w-4" />
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <ListChecksIcon className="size-4" />
           </div>
-          <span className="font-semibold text-gray-900">Task Management</span>
+          <span className="font-semibold text-foreground">Task Management</span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-gray-500 sm:inline">{email}</span>
-          <button
-            type="button"
-            onClick={logout}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-          >
-            <LogOut className="h-4 w-4" />
-            Log out
-          </button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1 transition hover:bg-muted focus:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+            <Avatar name={email ?? "?"} size="default" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel className="max-w-64 truncate font-normal text-foreground">
+              {email}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                <LogOutIcon />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-4 px-6 pb-5 sm:px-8">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Tasks</h1>
-          <p className="mt-1 text-sm text-gray-500">Track your team&apos;s work across every stage</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Tasks</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Track your team&apos;s work across every stage
+          </p>
         </div>
       </div>
 
-      <nav className="flex gap-1 px-6 sm:px-8">
-        {TABS.map(({ id, label, icon: Icon }) => {
-          const isActive = id === activeTab;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => onTabChange(id)}
-              className={cn(
-                "flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition",
-                isActive
-                  ? "border-violet-600 text-violet-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </button>
-          );
-        })}
-      </nav>
+      <div className="px-6 sm:px-8">
+        <Tabs value={activeTab} onValueChange={(v) => onTabChange(v as TabId)}>
+          <TabsList variant="line">
+            <TabsTrigger value="board">
+              <LayoutGridIcon />
+              Board
+            </TabsTrigger>
+            <TabsTrigger value="list">
+              <ListIcon />
+              List
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
     </header>
   );
 }

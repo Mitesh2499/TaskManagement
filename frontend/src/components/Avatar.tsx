@@ -1,14 +1,5 @@
-import { cn } from "@/lib/cn";
-
-const COLORS = [
-  "bg-rose-400",
-  "bg-amber-400",
-  "bg-emerald-400",
-  "bg-sky-400",
-  "bg-violet-400",
-  "bg-fuchsia-400",
-  "bg-teal-400",
-];
+import { Avatar as AvatarRoot, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -17,34 +8,40 @@ function getInitials(name: string) {
   return (first + last).toUpperCase() || "?";
 }
 
-function getColorClass(name: string) {
+// Deterministic per-name color so the same person always renders the same
+// swatch — distinct from the neutral theme since these represent identity, not state.
+const COLOR_VARS = [
+  "oklch(0.7 0.16 20)",
+  "oklch(0.75 0.15 70)",
+  "oklch(0.7 0.15 150)",
+  "oklch(0.7 0.13 230)",
+  "oklch(0.7 0.15 290)",
+  "oklch(0.7 0.18 330)",
+  "oklch(0.7 0.13 190)",
+];
+
+function getColor(name: string) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   }
-  return COLORS[hash % COLORS.length];
+  return COLOR_VARS[hash % COLOR_VARS.length];
 }
 
 interface AvatarProps {
   name: string;
-  size?: "sm" | "md";
+  size?: "sm" | "default";
   className?: string;
 }
 
 export function Avatar({ name, size = "sm", className }: AvatarProps) {
-  const sizeClass = size === "sm" ? "h-6 w-6 text-[10px]" : "h-9 w-9 text-xs";
-
   return (
-    <div
-      title={name}
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-2 ring-white select-none",
-        sizeClass,
-        getColorClass(name),
-        className,
-      )}
-    >
-      {getInitials(name)}
-    </div>
+    <AvatarRoot title={name} size={size} className={cn(className)}>
+      <AvatarFallback
+        style={{ backgroundColor: getColor(name), color: "white" }}
+      >
+        {getInitials(name)}
+      </AvatarFallback>
+    </AvatarRoot>
   );
 }

@@ -1,11 +1,12 @@
-import { cn } from "@/lib/cn";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { TaskPriority } from "@/types/task";
 
 const PRIORITY_STYLES: Record<TaskPriority, string> = {
-  Low: "bg-indigo-50 text-indigo-600",
-  Medium: "bg-amber-50 text-amber-600",
-  High: "bg-orange-50 text-orange-600",
-  Critical: "bg-rose-50 text-rose-600",
+  Low: "bg-priority-low text-priority-low-foreground",
+  Medium: "bg-priority-medium text-priority-medium-foreground",
+  High: "bg-priority-high text-priority-high-foreground",
+  Critical: "bg-priority-critical text-priority-critical-foreground",
 };
 
 interface PriorityBadgeProps {
@@ -14,15 +15,5 @@ interface PriorityBadgeProps {
 }
 
 export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
-        PRIORITY_STYLES[priority],
-        className,
-      )}
-    >
-      {priority}
-    </span>
-  );
+  return <Badge className={cn(PRIORITY_STYLES[priority], className)}>{priority}</Badge>;
 }

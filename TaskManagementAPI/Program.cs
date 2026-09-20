@@ -143,7 +143,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
     {
-        policy.WithOrigins("http://localhost:5174")
+        // Vite auto-increments the port when 5173 is busy, which happens often in dev.
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:5175")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });

@@ -1,12 +1,26 @@
 import { useMemo, useState } from "react";
+import { TriangleAlertIcon } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader, type TabId } from "@/components/PageHeader";
 import { TaskBoard } from "@/components/TaskBoard";
 import { TaskFormModal } from "@/components/TaskFormModal";
 import { TaskListView } from "@/components/TaskListView";
 import { TaskToolbar } from "@/components/TaskToolbar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTasks } from "@/hooks/useTasks";
 import { getApiErrorMessage } from "@/lib/apiError";
-import type { Task, TaskFormValues, TaskPriority, TaskStatus } from "@/types/task";
+import { STATUS_LABELS, type Task, type TaskFormValues, type TaskPriority, type TaskStatus } from "@/types/task";
 
 export function TasksPage() {
   const [activeTab, setActiveTab] = useState<TabId>("list");
@@ -14,8 +28,9 @@ export function TasksPage() {
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | "">("");
   const [search, setSearch] = useState("");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [taskPendingDelete, setTaskPendingDelete] = useState<Task | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const filter = useMemo(
     () => ({
@@ -37,17 +52,38 @@ export function TasksPage() {
     );
   }, [tasks, search]);
 
+  function openCreateModal() {
+    setEditingTask(null);
+    setIsModalOpen(true);
+  }
+
+  function openEditModal(task: Task) {
+    setEditingTask(task);
+    setIsModalOpen(true);
+  }
+
   async function handleCreate(values: TaskFormValues) {
-    await createTask(values);
+    try {
+      await createTask(values);
+      toast.success("Task created", { description: values.title });
+    } catch (err) {
+      toast.error("Couldn't create task", { description: getApiErrorMessage(err) });
+      throw err;
+    }
   }
 
   async function handleUpdate(values: TaskFormValues) {
     if (!editingTask) return;
-    await updateTask(editingTask.id, values);
+    try {
+      await updateTask(editingTask.id, values);
+      toast.success("Task updated", { description: values.title });
+    } catch (err) {
+      toast.error("Couldn't update task", { description: getApiErrorMessage(err) });
+      throw err;
+    }
   }
 
   async function handleStatusChange(task: Task, status: TaskStatus) {
-    setActionError(null);
     try {
       await updateTask(task.id, {
         title: task.title,
@@ -56,27 +92,28 @@ export function TasksPage() {
         priority: task.priority,
         assignedTo: task.assignedTo,
       });
+      toast.success(`Marked as ${STATUS_LABELS[status]}`, { description: task.title });
     } catch (err) {
-      setActionError(getApiErrorMessage(err));
+      toast.error("Couldn't update status", { description: getApiErrorMessage(err) });
     }
   }
 
-  async function handleDelete(task: Task) {
-    if (!window.confirm(`Delete "${task.title}"? This can't be undone.`)) {
-      return;
-    }
-    setActionError(null);
+  async function handleConfirmDelete() {
+    if (!taskPendingDelete) return;
+    setIsDeleting(true);
     try {
-      await removeTask(task.id);
+      await removeTask(taskPendingDelete.id);
+      toast.success("Task deleted", { description: taskPendingDelete.title });
+      setTaskPendingDelete(null);
     } catch (err) {
-      setActionError(getApiErrorMessage(err));
+      toast.error("Couldn't delete task", { description: getApiErrorMessage(err) });
+    } finally {
+      setIsDeleting(false);
     }
   }
-
-  const isModalOpen = isCreating || editingTask !== null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/30">
       <PageHeader activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main className="px-6 py-6 sm:px-8">
@@ -87,43 +124,57 @@ export function TasksPage() {
           onStatusChange={setStatusFilter}
           priority={priorityFilter}
           onPriorityChange={setPriorityFilter}
-          onNewTask={() => setIsCreating(true)}
+          onNewTask={openCreateModal}
         />
 
-        {actionError && (
-          <div className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">
-            {actionError}
-          </div>
-        )}
-
         {isLoading ? (
-          <p className="py-16 text-center text-sm text-gray-400">Loading tasks…</p>
-        ) : error ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-8 text-center text-sm text-rose-600">
-            {error}
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Skeleton key={index} className="h-14 w-full rounded-xl" />
+            ))}
           </div>
+        ) : error ? (
+          <Alert variant="destructive">
+            <TriangleAlertIcon />
+            <AlertTitle>Couldn&apos;t load tasks</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         ) : activeTab === "board" ? (
-          <TaskBoard tasks={visibleTasks} onEdit={setEditingTask} onDelete={handleDelete} />
+          <TaskBoard tasks={visibleTasks} onEdit={openEditModal} onDelete={setTaskPendingDelete} />
         ) : (
           <TaskListView
             tasks={visibleTasks}
             onStatusChange={handleStatusChange}
-            onEdit={setEditingTask}
-            onDelete={handleDelete}
+            onEdit={openEditModal}
+            onDelete={setTaskPendingDelete}
+            onNewTask={openCreateModal}
           />
         )}
       </main>
 
-      {isModalOpen && (
-        <TaskFormModal
-          task={editingTask}
-          onClose={() => {
-            setEditingTask(null);
-            setIsCreating(false);
-          }}
-          onSubmit={editingTask ? handleUpdate : handleCreate}
-        />
-      )}
+      <TaskFormModal
+        task={editingTask}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onSubmit={editingTask ? handleUpdate : handleCreate}
+      />
+
+      <AlertDialog open={taskPendingDelete !== null} onOpenChange={(open) => !open && setTaskPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete task?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete &quot;{taskPendingDelete?.title}&quot;. This can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" disabled={isDeleting} onClick={handleConfirmDelete}>
+              {isDeleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

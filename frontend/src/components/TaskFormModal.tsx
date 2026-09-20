@@ -1,5 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { X } from "lucide-react";
+import { TriangleAlertIcon } from "lucide-react";
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/apiError";
 import { STATUS_LABELS, TASK_PRIORITIES, TASK_STATUSES, type Task, type TaskFormValues } from "@/types/task";
 
@@ -13,20 +21,22 @@ const EMPTY_VALUES: TaskFormValues = {
 
 interface TaskFormModalProps {
   task: Task | null;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSubmit: (values: TaskFormValues) => Promise<void>;
 }
 
-export function TaskFormModal({ task, onClose, onSubmit }: TaskFormModalProps) {
+export function TaskFormModal({ task, open, onOpenChange, onSubmit }: TaskFormModalProps) {
   const [values, setValues] = useState<TaskFormValues>(EMPTY_VALUES);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    if (!open) return;
     /* eslint-disable react-hooks/set-state-in-effect --
-       Resetting the form to match the task passed in (or a blank form) whenever it
-       changes is the "adjust state when a prop changes" case React's docs call out. */
+       Resetting the form to match the task passed in (or a blank form) whenever the
+       dialog opens is the "adjust state when a prop changes" case React's docs call out. */
     if (task) {
       setValues({
         title: task.title,
@@ -41,7 +51,7 @@ export function TaskFormModal({ task, onClose, onSubmit }: TaskFormModalProps) {
     setError(null);
     setFieldErrors({});
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [task]);
+  }, [task, open]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -50,7 +60,7 @@ export function TaskFormModal({ task, onClose, onSubmit }: TaskFormModalProps) {
     setIsSubmitting(true);
     try {
       await onSubmit(values);
-      onClose();
+      onOpenChange(false);
     } catch (err) {
       setError(getApiErrorMessage(err));
       setFieldErrors(getApiFieldErrors(err) ?? {});
@@ -60,117 +70,121 @@ export function TaskFormModal({ task, onClose, onSubmit }: TaskFormModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900">
-            {task ? "Edit task" : "New task"}
-          </h2>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{task ? "Edit task" : "New task"}</DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
-          {error && (
-            <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</div>
-          )}
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-gray-700">Title</span>
-            <input
-              required
-              maxLength={200}
-              value={values.title}
-              onChange={(e) => setValues((v) => ({ ...v, title: e.target.value }))}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-            />
-            {fieldErrors.Title && (
-              <span className="text-xs text-rose-500">{fieldErrors.Title[0]}</span>
+        <form onSubmit={handleSubmit}>
+          <FieldGroup>
+            {error && (
+              <Alert variant="destructive">
+                <TriangleAlertIcon />
+                <AlertTitle>{error}</AlertTitle>
+              </Alert>
             )}
-          </label>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-gray-700">Description</span>
-            <textarea
-              maxLength={2000}
-              rows={3}
-              value={values.description}
-              onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
-              className="resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-            />
-          </label>
+            <Field data-invalid={Boolean(fieldErrors.Title)}>
+              <FieldLabel htmlFor="title">Title</FieldLabel>
+              <InputGroup>
+                <InputGroupInput
+                  id="title"
+                  required
+                  maxLength={200}
+                  placeholder="e.g. Design the homepage wireframe"
+                  value={values.title}
+                  onChange={(e) => setValues((v) => ({ ...v, title: e.target.value }))}
+                  aria-invalid={Boolean(fieldErrors.Title)}
+                />
+              </InputGroup>
+              <FieldError errors={fieldErrors.Title?.map((message) => ({ message }))} />
+            </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-gray-700">Status</span>
-              <select
-                value={values.status}
-                onChange={(e) => setValues((v) => ({ ...v, status: e.target.value as typeof v.status }))}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-              >
-                {TASK_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Field>
+              <FieldLabel htmlFor="description">Description</FieldLabel>
+              <Textarea
+                id="description"
+                maxLength={2000}
+                rows={3}
+                placeholder="Add any useful context, links, or acceptance criteria…"
+                value={values.description}
+                onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
+              />
+            </Field>
 
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-gray-700">Priority</span>
-              <select
-                value={values.priority}
-                onChange={(e) => setValues((v) => ({ ...v, priority: e.target.value as typeof v.priority }))}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-              >
-                {TASK_PRIORITIES.map((priority) => (
-                  <option key={priority} value={priority}>
-                    {priority}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field>
+                <FieldLabel>Status</FieldLabel>
+                <Select
+                  value={values.status}
+                  onValueChange={(v) => setValues((prev) => ({ ...prev, status: v as typeof prev.status }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {TASK_STATUSES.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {STATUS_LABELS[status]}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-gray-700">Assigned to</span>
-            <input
-              required
-              maxLength={100}
-              value={values.assignedTo}
-              onChange={(e) => setValues((v) => ({ ...v, assignedTo: e.target.value }))}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-              placeholder="Full name"
-            />
-            {fieldErrors.AssignedTo && (
-              <span className="text-xs text-rose-500">{fieldErrors.AssignedTo[0]}</span>
-            )}
-          </label>
+              <Field>
+                <FieldLabel>Priority</FieldLabel>
+                <Select
+                  value={values.priority}
+                  onValueChange={(v) => setValues((prev) => ({ ...prev, priority: v as typeof prev.priority }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {TASK_PRIORITIES.map((priority) => (
+                        <SelectItem key={priority} value={priority}>
+                          {priority}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
 
-          <div className="mt-2 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
-            >
+            <Field data-invalid={Boolean(fieldErrors.AssignedTo)}>
+              <FieldLabel htmlFor="assignedTo">Assigned to</FieldLabel>
+              <InputGroup>
+                <InputGroupInput
+                  id="assignedTo"
+                  required
+                  maxLength={100}
+                  placeholder="e.g. Priya Nair"
+                  value={values.assignedTo}
+                  onChange={(e) => setValues((v) => ({ ...v, assignedTo: e.target.value }))}
+                  aria-invalid={Boolean(fieldErrors.AssignedTo)}
+                />
+              </InputGroup>
+              <FieldError errors={fieldErrors.AssignedTo?.map((message) => ({ message }))} />
+            </Field>
+          </FieldGroup>
+
+          <DialogFooter className="mt-6">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Spinner data-icon="inline-start" />}
               {isSubmitting ? "Saving…" : task ? "Save changes" : "Create task"}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

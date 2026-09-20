@@ -1,5 +1,11 @@
-import { Plus, Search } from "lucide-react";
+import { PlusIcon, SearchIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { STATUS_LABELS, TASK_PRIORITIES, TASK_STATUSES, type TaskPriority, type TaskStatus } from "@/types/task";
+
+const ALL_STATUSES = "all";
+const ALL_PRIORITIES = "all";
 
 interface TaskToolbarProps {
   search: string;
@@ -22,51 +28,60 @@ export function TaskToolbar({
 }: TaskToolbarProps) {
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2">
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <input
+      <InputGroup className="w-64">
+        <InputGroupAddon>
+          <SearchIcon />
+        </InputGroupAddon>
+        <InputGroupInput
           type="search"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search tasks"
-          className="w-56 rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
+          placeholder="Search by title or assignee…"
         />
-      </div>
+      </InputGroup>
 
-      <select
-        value={status}
-        onChange={(e) => onStatusChange(e.target.value as TaskStatus | "")}
-        className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
+      <Select
+        value={status || ALL_STATUSES}
+        onValueChange={(v) => onStatusChange(v === ALL_STATUSES ? "" : (v as TaskStatus))}
       >
-        <option value="">All statuses</option>
-        {TASK_STATUSES.map((s) => (
-          <option key={s} value={s}>
-            {STATUS_LABELS[s]}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className="w-40">
+          <SelectValue placeholder="All statuses" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value={ALL_STATUSES}>All statuses</SelectItem>
+            {TASK_STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {STATUS_LABELS[s]}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
 
-      <select
-        value={priority}
-        onChange={(e) => onPriorityChange(e.target.value as TaskPriority | "")}
-        className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
+      <Select
+        value={priority || ALL_PRIORITIES}
+        onValueChange={(v) => onPriorityChange(v === ALL_PRIORITIES ? "" : (v as TaskPriority))}
       >
-        <option value="">All priorities</option>
-        {TASK_PRIORITIES.map((p) => (
-          <option key={p} value={p}>
-            {p}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className="w-40">
+          <SelectValue placeholder="All priorities" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value={ALL_PRIORITIES}>All priorities</SelectItem>
+            {TASK_PRIORITIES.map((p) => (
+              <SelectItem key={p} value={p}>
+                {p}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
 
-      <button
-        type="button"
-        onClick={onNewTask}
-        className="ml-auto flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
-      >
-        <Plus className="h-4 w-4" />
+      <Button onClick={onNewTask} className="ml-auto">
+        <PlusIcon data-icon="inline-start" />
         New Task
-      </button>
+      </Button>
     </div>
   );
 }

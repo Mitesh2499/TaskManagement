@@ -1,29 +1,33 @@
 import { TaskCard } from "@/components/TaskCard";
-import { cn } from "@/lib/cn";
-import type { Task } from "@/types/task";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { STATUS_LABELS, type Task, type TaskStatus } from "@/types/task";
+
+const STATUS_DOT_STYLES: Record<TaskStatus, string> = {
+  ToDo: "bg-status-todo-foreground",
+  InProgress: "bg-status-in-progress-foreground",
+  Done: "bg-status-done-foreground",
+};
 
 interface BoardColumnProps {
-  title: string;
-  dotColorClass: string;
+  status: TaskStatus;
   tasks: Task[];
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
 }
 
-export function BoardColumn({ title, dotColorClass, tasks, onEdit, onDelete }: BoardColumnProps) {
+export function BoardColumn({ status, tasks, onEdit, onDelete }: BoardColumnProps) {
   return (
-    <div className="flex w-80 shrink-0 flex-col">
+    <div className="flex min-w-0 flex-col">
       <div className="flex items-center gap-2 px-1 pb-3">
-        <span className={cn("h-2 w-2 rounded-full", dotColorClass)} />
-        <h2 className="text-sm font-semibold text-gray-800">{title}</h2>
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-100 px-1.5 text-xs font-semibold text-blue-600">
-          {tasks.length}
-        </span>
+        <span className={cn("size-2 rounded-full", STATUS_DOT_STYLES[status])} />
+        <h2 className="text-sm font-semibold text-foreground">{STATUS_LABELS[status]}</h2>
+        <Badge variant="secondary">{tasks.length}</Badge>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-xl bg-gray-50/60 p-2">
+      <div className="flex flex-col gap-3 rounded-xl bg-muted/40 p-2">
         {tasks.length === 0 ? (
-          <p className="px-2 py-6 text-center text-xs text-gray-400">No tasks</p>
+          <p className="px-2 py-6 text-center text-xs text-muted-foreground">No tasks</p>
         ) : (
           tasks.map((task) => (
             <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
