@@ -210,7 +210,7 @@ public class TaskServiceTests
             AssignedToUserId = _alice.Id,
         };
 
-        var result = await _sut.CreateTaskAsync(request);
+        var result = await _sut.CreateTaskAsync(request, _alice.Id);
 
         result.Id.Should().BeGreaterThan(0);
         result.Status.Should().Be(TaskState.ToDo);
@@ -233,7 +233,7 @@ public class TaskServiceTests
             AssignedToUserId = 9999,
         };
 
-        var act = () => _sut.CreateTaskAsync(request);
+        var act = () => _sut.CreateTaskAsync(request, _alice.Id);
 
         await act.Should().ThrowAsync<UserNotFoundException>();
     }
@@ -252,7 +252,7 @@ public class TaskServiceTests
             RowVersion = Convert.ToBase64String(task.RowVersion),
         };
 
-        var result = await _sut.UpdateTaskAsync(task.Id, request);
+        var result = await _sut.UpdateTaskAsync(task.Id, request, _alice.Id);
 
         result.Should().NotBeNull();
         result!.Title.Should().Be("New title");
@@ -274,7 +274,7 @@ public class TaskServiceTests
             AssignedToUserId = _alice.Id,
         };
 
-        var result = await _sut.UpdateTaskAsync(id: 9999, request);
+        var result = await _sut.UpdateTaskAsync(id: 9999, request, _alice.Id);
 
         result.Should().BeNull();
     }
@@ -291,7 +291,7 @@ public class TaskServiceTests
             AssignedToUserId = 9999,
         };
 
-        var act = () => _sut.UpdateTaskAsync(task.Id, request);
+        var act = () => _sut.UpdateTaskAsync(task.Id, request, _alice.Id);
 
         await act.Should().ThrowAsync<UserNotFoundException>();
     }
@@ -301,7 +301,7 @@ public class TaskServiceTests
     {
         var task = AddTask("To be deleted", TaskState.ToDo, TaskPriority.Low);
 
-        var deleted = await _sut.SoftDeleteTaskAsync(task.Id, rowVersion: null);
+        var deleted = await _sut.SoftDeleteTaskAsync(task.Id, rowVersion: null, _alice.Id);
 
         deleted.Should().BeTrue();
         (await _sut.GetTaskByIdAsync(task.Id)).Should().BeNull();
@@ -314,7 +314,7 @@ public class TaskServiceTests
     [Fact]
     public async Task SoftDeleteTaskAsync_UnknownId_ReturnsFalse()
     {
-        var deleted = await _sut.SoftDeleteTaskAsync(9999, rowVersion: null);
+        var deleted = await _sut.SoftDeleteTaskAsync(9999, rowVersion: null, _alice.Id);
 
         deleted.Should().BeFalse();
     }
@@ -328,7 +328,7 @@ public class TaskServiceTests
             Status = "ToDo",
             Priority = "Low",
             AssignedToUserId = _alice.Id,
-        });
+        }, _alice.Id);
 
         var result = await _sut.UpdateTaskAsync(created.Id, new UpdateTaskRequest
         {
@@ -337,7 +337,7 @@ public class TaskServiceTests
             Priority = "Low",
             AssignedToUserId = _alice.Id,
             RowVersion = created.RowVersion,
-        });
+        }, _alice.Id);
 
         result.Should().NotBeNull();
         result!.Title.Should().Be("Updated");
@@ -373,7 +373,7 @@ public class TaskServiceTests
             Priority = "Low",
             AssignedToUserId = _alice.Id,
             RowVersion = staleRowVersion,
-        });
+        }, _alice.Id);
 
         // The rejected save must not silently overwrite the concurrent change — verified via
         // the exception type. (Re-reading the title through this same DbContext instance isn't
@@ -392,7 +392,7 @@ public class TaskServiceTests
 
         await SimulateConcurrentChangeAsync(task.Id);
 
-        var act = () => _sut.SoftDeleteTaskAsync(task.Id, staleRowVersion);
+        var act = () => _sut.SoftDeleteTaskAsync(task.Id, staleRowVersion, _alice.Id);
 
         await act.Should().ThrowAsync<TaskConcurrencyException>();
         (await _sut.GetTaskByIdAsync(task.Id)).Should().NotBeNull();

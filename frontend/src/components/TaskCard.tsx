@@ -2,6 +2,7 @@ import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/Avatar";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import { RichTextView } from "@/components/RichTextView";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -61,7 +62,7 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
 
       <h3 className="mt-3 text-sm font-semibold text-foreground">{task.title}</h3>
       {task.description && (
-        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{task.description}</p>
+        <RichTextView html={task.description} clamp={2} className="mt-1 text-muted-foreground" />
       )}
 
       <div className="mt-4 flex items-center justify-between">

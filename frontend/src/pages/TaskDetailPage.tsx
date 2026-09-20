@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { isAxiosError } from "axios";
-import { ArrowLeftIcon, PencilIcon, TriangleAlertIcon, Trash2Icon } from "lucide-react";
+import { ArrowLeftIcon, ChevronLeftIcon, ChevronRightIcon, PencilIcon, TriangleAlertIcon, Trash2Icon } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Avatar } from "@/components/Avatar";
+import { ChangeLogList } from "@/components/ChangeLogList";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import { RichTextView } from "@/components/RichTextView";
 import { StatusSelect } from "@/components/StatusSelect";
 import { TaskFormModal } from "@/components/TaskFormModal";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -21,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useChangeLog } from "@/hooks/useChangeLog";
 import { useTask } from "@/hooks/useTask";
 import { getApiErrorMessage } from "@/lib/apiError";
 import { STATUS_LABELS, type TaskFormValues, type TaskStatus } from "@/types/task";
@@ -40,6 +43,7 @@ export function TaskDetailPage() {
   const taskId = Number(id);
   const navigate = useNavigate();
   const { task, isLoading, error, refetch, updateTask, removeTask } = useTask(taskId);
+  const changeLog = useChangeLog(taskId, Boolean(task));
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -60,6 +64,7 @@ export function TaskDetailPage() {
     try {
       await updateTask(values);
       toast.success("Task updated", { description: values.title });
+      changeLog.refetch();
     } catch (err) {
       if (!handleConflict(err, "update task")) {
         toast.error("Couldn't update task", { description: getApiErrorMessage(err) });
@@ -80,6 +85,7 @@ export function TaskDetailPage() {
         rowVersion: task.rowVersion,
       });
       toast.success(`Marked as ${STATUS_LABELS[status]}`, { description: task.title });
+      changeLog.refetch();
     } catch (err) {
       if (!handleConflict(err, "update status")) {
         toast.error("Couldn't update status", { description: getApiErrorMessage(err) });
@@ -188,9 +194,50 @@ export function TaskDetailPage() {
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Description</p>
               {task.description ? (
-                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{task.description}</p>
+                <RichTextView html={task.description} className="mt-2" />
               ) : (
                 <p className="mt-2 text-sm text-muted-foreground">No description provided.</p>
+              )}
+            </div>
+
+            <Separator className="my-6" />
+
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Activity</p>
+              <div className="mt-3">
+                <ChangeLogList
+                  entries={changeLog.entries}
+                  isLoading={changeLog.isLoading}
+                  error={changeLog.error}
+                  emptyMessage="No changes recorded for this task yet."
+                />
+              </div>
+              {changeLog.totalPages > 1 && (
+                <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
+                  <span>
+                    Page {changeLog.page} of {changeLog.totalPages}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={changeLog.page <= 1}
+                      onClick={() => changeLog.goToPage(changeLog.page - 1)}
+                      aria-label="Previous page"
+                    >
+                      <ChevronLeftIcon />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={changeLog.page >= changeLog.totalPages}
+                      onClick={() => changeLog.goToPage(changeLog.page + 1)}
+                      aria-label="Next page"
+                    >
+                      <ChevronRightIcon />
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           </div>

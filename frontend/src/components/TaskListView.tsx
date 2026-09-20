@@ -2,6 +2,7 @@ import { ClipboardListIcon, MoreHorizontalIcon, PencilIcon, Trash2Icon } from "l
 import { useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/Avatar";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import { RichTextView } from "@/components/RichTextView";
 import { SortableTableHead } from "@/components/SortableTableHead";
 import { StatusSelect } from "@/components/StatusSelect";
 import { Button } from "@/components/ui/button";
@@ -100,7 +101,7 @@ export function TaskListView({
               <TableCell className="max-w-xs whitespace-normal">
                 <p className="font-medium text-foreground">{task.title}</p>
                 {task.description && (
-                  <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{task.description}</p>
+                  <RichTextView html={task.description} clamp={1} className="mt-0.5 text-xs text-muted-foreground" />
                 )}
               </TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>

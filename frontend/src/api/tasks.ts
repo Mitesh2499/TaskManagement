@@ -1,4 +1,5 @@
 import { apiClient } from "@/api/client";
+import type { TaskAuditLog } from "@/types/auditLog";
 import type { PagedResult, Task, TaskFilter, TaskFormValues, TaskSummaryRow } from "@/types/task";
 
 export async function getTasks(filter: TaskFilter = {}): Promise<PagedResult<Task>> {
@@ -37,4 +38,18 @@ export async function updateTask(id: number, values: TaskFormValues): Promise<Ta
 
 export async function deleteTask(id: number, rowVersion?: string): Promise<void> {
   await apiClient.delete(`/api/tasks/${id}`, { params: rowVersion ? { rowVersion } : undefined });
+}
+
+export async function getChangeLog(page = 1, pageSize = 20): Promise<PagedResult<TaskAuditLog>> {
+  const { data } = await apiClient.get<PagedResult<TaskAuditLog>>("/api/tasks/changelog", {
+    params: { page, pageSize },
+  });
+  return data;
+}
+
+export async function getTaskChangeLog(taskId: number, page = 1, pageSize = 20): Promise<PagedResult<TaskAuditLog>> {
+  const { data } = await apiClient.get<PagedResult<TaskAuditLog>>(`/api/tasks/${taskId}/changelog`, {
+    params: { page, pageSize },
+  });
+  return data;
 }

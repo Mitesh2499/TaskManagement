@@ -6,8 +6,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { Textarea } from "@/components/ui/textarea";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import { useUsers } from "@/hooks/useUsers";
 import { getApiErrorMessage, getApiFieldErrors } from "@/lib/apiError";
 import { STATUS_LABELS, TASK_PRIORITIES, TASK_STATUSES, type Task, type TaskFormValues } from "@/types/task";
@@ -108,13 +108,11 @@ export function TaskFormModal({ task, open, onOpenChange, onSubmit }: TaskFormMo
 
             <Field>
               <FieldLabel htmlFor="description">Description</FieldLabel>
-              <Textarea
+              <RichTextEditor
                 id="description"
-                maxLength={2000}
-                rows={3}
                 placeholder="Add any useful context, links, or acceptance criteria…"
                 value={values.description}
-                onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
+                onChange={(html) => setValues((v) => ({ ...v, description: html }))}
               />
             </Field>
 

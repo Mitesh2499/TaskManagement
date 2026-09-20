@@ -1,7 +1,10 @@
-import { LayoutGridIcon, ListIcon, ListChecksIcon, LogOutIcon } from "lucide-react";
+import { useState } from "react";
+import { HistoryIcon, LayoutGridIcon, ListIcon, ListChecksIcon, LogOutIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/useAuth";
 import { Avatar } from "@/components/Avatar";
+import { ChangeLogDialog } from "@/components/ChangeLogDialog";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +25,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ activeTab, onTabChange }: PageHeaderProps) {
   const { name, email, logout } = useAuth();
+  const [isChangeLogOpen, setIsChangeLogOpen] = useState(false);
 
   function handleLogout() {
     logout();
@@ -65,7 +69,13 @@ export function PageHeader({ activeTab, onTabChange }: PageHeaderProps) {
             Track your team&apos;s work across every stage
           </p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => setIsChangeLogOpen(true)}>
+          <HistoryIcon data-icon="inline-start" />
+          Change log
+        </Button>
       </div>
+
+      <ChangeLogDialog open={isChangeLogOpen} onOpenChange={setIsChangeLogOpen} />
 
       <div className="px-6 sm:px-8">
         <Tabs value={activeTab} onValueChange={(v) => onTabChange(v as TabId)}>
